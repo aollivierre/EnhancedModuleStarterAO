@@ -10,7 +10,7 @@ function Validate-SoftwareInstallation {
     )
 
     Begin {
-        Write-EnhancedModuleStarterLog -Message "Starting Validate-SoftwareInstallation function" -Level "NOTICE"
+        Write-EnhancedLog -Message "Starting Validate-SoftwareInstallation function" -Level "NOTICE"
         # Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
@@ -71,7 +71,7 @@ function Validate-SoftwareInstallation {
                     $appVersion = Sanitize-VersionString -versionString $appVersionString
 
                     if ($appVersion -ge $MinVersion) {
-                        Write-EnhancedModuleStarterLog -Message "Validation successful: $SoftwareName version $appVersion is installed at $ExePath." -Level "INFO"
+                        Write-EnhancedLog -Message "Validation successful: $SoftwareName version $appVersion is installed at $ExePath." -Level "INFO"
                         return @{
                             IsInstalled = $true
                             Version     = $appVersion
@@ -79,16 +79,16 @@ function Validate-SoftwareInstallation {
                         }
                     }
                     else {
-                        Write-EnhancedModuleStarterLog -Message "Validation failed: $SoftwareName version $appVersion does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
+                        Write-EnhancedLog -Message "Validation failed: $SoftwareName version $appVersion does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
                     }
                 }
                 else {
-                    Write-EnhancedModuleStarterLog -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "ERROR"
+                    Write-EnhancedLog -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "ERROR"
                 }
             }
 
             $retryCount++
-            Write-EnhancedModuleStarterLog -Message "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet the minimum requirement ($MinVersion). Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
+            Write-EnhancedLog -Message "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet the minimum requirement ($MinVersion). Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
             Start-Sleep -Seconds $DelayBetweenRetries
         }
 
@@ -96,7 +96,7 @@ function Validate-SoftwareInstallation {
     }
 
     End {
-        Write-EnhancedModuleStarterLog -Message "Exiting Validate-SoftwareInstallation function" -Level "NOTICE"
+        Write-EnhancedLog -Message "Exiting Validate-SoftwareInstallation function" -Level "NOTICE"
     }
 }
 

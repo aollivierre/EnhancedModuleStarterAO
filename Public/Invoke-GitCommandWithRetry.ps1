@@ -13,13 +13,13 @@ function Invoke-GitCommandWithRetry {
             $argumentArray = $Arguments -split ' '
             $output = & "$GitPath" @argumentArray
             if ($output -match "fatal:") {
-                Write-EnhancedModuleStarterLog -Message "Git command failed: $output" -Level "WARNING"
+                Write-EnhancedLog -Message "Git command failed: $output" -Level "WARNING"
                 if ($i -lt ($MaxRetries - 1)) {
-                    Write-EnhancedModuleStarterLog -Message "Retrying in $DelayBetweenRetries seconds..." -Level "INFO"
+                    Write-EnhancedLog -Message "Retrying in $DelayBetweenRetries seconds..." -Level "INFO"
                     Start-Sleep -Seconds $DelayBetweenRetries
                 }
                 else {
-                    Write-EnhancedModuleStarterLog -Message "Git command failed after $MaxRetries retries." -Level "ERROR"
+                    Write-EnhancedLog -Message "Git command failed after $MaxRetries retries." -Level "ERROR"
                     throw "Git command failed: $output"
                 }
             }
@@ -28,9 +28,9 @@ function Invoke-GitCommandWithRetry {
             }
         }
         catch {
-            Write-EnhancedModuleStarterLog -Message "Error executing Git command: $_" -Level "ERROR"
+            Write-EnhancedLog -Message "Error executing Git command: $_" -Level "ERROR"
             if ($i -lt ($MaxRetries - 1)) {
-                Write-EnhancedModuleStarterLog -Message "Retrying in $DelayBetweenRetries seconds..." -Level "INFO"
+                Write-EnhancedLog -Message "Retrying in $DelayBetweenRetries seconds..." -Level "INFO"
                 Start-Sleep -Seconds $DelayBetweenRetries
             }
             else {

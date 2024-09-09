@@ -25,13 +25,13 @@ function Authenticate-GitHubCLI {
     )
 
     begin {
-        Write-Log -Message "Starting Authenticate-GitHubCLI function" -Level "NOTICE"
+        Write-EnhancedLog -Message "Starting Authenticate-GitHubCLI function" -Level "NOTICE"
         # Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     process {
         try {
-            Write-Log -Message "Authenticating with GitHub CLI..." -Level "INFO"
+            Write-EnhancedLog -Message "Authenticating with GitHub CLI..." -Level "INFO"
 
             # Prompt user to choose the authentication method
             $choice = Read-Host "Select authentication method: 1) Enter GitHub token manually 2) Use secrets file in `$PSScriptRoot"
@@ -42,7 +42,7 @@ function Authenticate-GitHubCLI {
                 $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
                 $token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
                 [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
-                Write-Log -Message "Using manually entered GitHub token for authentication." -Level "INFO"
+                Write-EnhancedLog -Message "Using manually entered GitHub token for authentication." -Level "INFO"
             }
             elseif ($choice -eq '2') {
                 # Option 2: Use secrets file in $PSScriptRoot
@@ -50,7 +50,7 @@ function Authenticate-GitHubCLI {
 
                 if (-not (Test-Path -Path $secretsFilePath)) {
                     $errorMessage = "Secrets file not found at path: $secretsFilePath"
-                    Write-Log -Message $errorMessage -Level "ERROR"
+                    Write-EnhancedLog -Message $errorMessage -Level "ERROR"
                     throw $errorMessage
                 }
 
@@ -59,15 +59,15 @@ function Authenticate-GitHubCLI {
 
                 if (-not $token) {
                     $errorMessage = "GitHub token not found in the secrets file."
-                    Write-Log -Message $errorMessage -Level "ERROR"
+                    Write-EnhancedLog -Message $errorMessage -Level "ERROR"
                     throw $errorMessage
                 }
 
-                Write-Log -Message "Using GitHub token from secrets file for authentication." -Level "INFO"
+                Write-EnhancedLog -Message "Using GitHub token from secrets file for authentication." -Level "INFO"
             }
             else {
                 $errorMessage = "Invalid selection. Please choose 1 or 2."
-                Write-Log -Message $errorMessage -Level "ERROR"
+                Write-EnhancedLog -Message $errorMessage -Level "ERROR"
                 throw $errorMessage
             }
 
@@ -76,7 +76,7 @@ function Authenticate-GitHubCLI {
             $authStatus = & $GhPath $authArguments 2>&1
 
             if ($authStatus -notlike "*Logged in to github.com*") {
-                Write-Log -Message "GitHub CLI is not authenticated. Attempting authentication using selected method..." -Level "WARNING"
+                Write-EnhancedLog -Message "GitHub CLI is not authenticated. Attempting authentication using selected method..." -Level "WARNING"
 
                 # Authenticate using the selected method
                 $loginArguments = @("auth", "login", "--with-token")
@@ -85,25 +85,25 @@ function Authenticate-GitHubCLI {
                 # Re-check the authentication status
                 $authStatus = & $GhPath $authArguments 2>&1
                 if ($authStatus -like "*Logged in to github.com*") {
-                    Write-Log -Message "GitHub CLI successfully authenticated." -Level "INFO"
+                    Write-EnhancedLog -Message "GitHub CLI successfully authenticated." -Level "INFO"
                 }
                 else {
                     $errorMessage = "Failed to authenticate GitHub CLI. Please check the token and try again."
-                    Write-Log -Message $errorMessage -Level "ERROR"
+                    Write-EnhancedLog -Message $errorMessage -Level "ERROR"
                     throw $errorMessage
                 }
             }
             else {
-                Write-Log -Message "GitHub CLI is already authenticated." -Level "INFO"
+                Write-EnhancedLog -Message "GitHub CLI is already authenticated." -Level "INFO"
             }
         }
         catch {
-            Write-Log -Message "An error occurred during GitHub CLI authentication: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred during GitHub CLI authentication: $($_.Exception.Message)" -Level "ERROR"
             throw $_
         }
     }
 
     end {
-        Write-Log -Message "Authenticate-GitHubCLI function execution completed." -Level "NOTICE"
+        Write-EnhancedLog -Message "Authenticate-GitHubCLI function execution completed." -Level "NOTICE"
     }
 }

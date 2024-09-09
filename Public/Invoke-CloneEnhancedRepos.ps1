@@ -29,7 +29,7 @@ function Invoke-CloneEnhancedRepos {
     catch {
         # Capture the error details
         $errorDetails = $_ | Out-String
-        Write-Log "An error occurred: $errorDetails" -Level "ERROR"
+        Write-EnhancedLog "An error occurred: $errorDetails" -Level "ERROR"
         throw
     }
 }

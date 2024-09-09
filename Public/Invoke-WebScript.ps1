@@ -6,10 +6,10 @@ function Invoke-WebScript {
 
     $powerShellPath = Get-PowerShellPath -ForcePowerShell5
 
-    Write-EnhancedModuleStarterLog -Message "Validating URL: $url" -Level "INFO"
+    Write-EnhancedLog -Message "Validating URL: $url" -Level "INFO"
 
     if (Test-Url -url $url) {
-        Write-EnhancedModuleStarterLog -Message "Running script from URL: $url" -Level "INFO"
+        Write-EnhancedLog -Message "Running script from URL: $url" -Level "INFO"
 
         $startProcessParams = @{
             FilePath     = $powerShellPath
@@ -28,7 +28,7 @@ function Invoke-WebScript {
         return $process
     }
     else {
-        Write-EnhancedModuleStarterLog -Message "URL $url is not accessible" -Level "ERROR"
+        Write-EnhancedLog -Message "URL $url is not accessible" -Level "ERROR"
         return $null
     }
 }

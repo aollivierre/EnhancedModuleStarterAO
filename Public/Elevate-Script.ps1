@@ -1,6 +1,6 @@
 function Elevate-Script {
     if (-not (Test-Admin)) {
-        Write-Log "Restarting script with elevated permissions..."
+        Write-EnhancedLog "Restarting script with elevated permissions..."
         $startProcessParams = @{
             FilePath     = "powershell.exe"
             ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)

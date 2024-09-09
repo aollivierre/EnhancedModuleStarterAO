@@ -28,7 +28,7 @@ function Get-GitPath {
         # Check the common paths
         foreach ($path in $commonPaths) {
             if (Test-Path -Path $path) {
-                Write-EnhancedModuleStarterLog -Message "Git found at: $path" -Level "INFO"
+                Write-EnhancedLog -Message "Git found at: $path" -Level "INFO"
                 return $path
             }
         }
@@ -36,16 +36,16 @@ function Get-GitPath {
         # If not found, check if Git is in the system PATH
         $gitPathInEnv = (Get-Command git -ErrorAction SilentlyContinue).Source
         if ($gitPathInEnv) {
-            Write-EnhancedModuleStarterLog -Message "Git found in system PATH: $gitPathInEnv" -Level "INFO"
+            Write-EnhancedLog -Message "Git found in system PATH: $gitPathInEnv" -Level "INFO"
             return $gitPathInEnv
         }
 
         # If Git is still not found, return $null
-        Write-EnhancedModuleStarterLog -Message "Git executable not found." -Level "ERROR"
+        Write-EnhancedLog -Message "Git executable not found." -Level "ERROR"
         return $null
     }
     catch {
-        Write-EnhancedModuleStarterLog -Message "Error occurred while trying to find Git path: $_" -Level "ERROR"
+        Write-EnhancedLog -Message "Error occurred while trying to find Git path: $_" -Level "ERROR"
         return $null
     }
 }

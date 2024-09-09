@@ -3,7 +3,7 @@ function Install-GitFromWeb {
         [string]$url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"
     )
 
-    Write-EnhancedModuleStarterLog -Message "Attempting to install Git from URL: $url" -Level "INFO"
+    Write-EnhancedLog -Message "Attempting to install Git from URL: $url" -Level "INFO"
 
     $process = Invoke-WebScript -url $url
     if ($process) {
@@ -21,16 +21,16 @@ function Install-GitFromWeb {
 
         $postValidationResult = Validate-SoftwareInstallation @validationParams
         if ($postValidationResult.IsInstalled -and $postValidationResult.Version -ge $validationParams.MinVersion) {
-            Write-EnhancedModuleStarterLog -Message "Git successfully installed and validated." -Level "INFO"
+            Write-EnhancedLog -Message "Git successfully installed and validated." -Level "INFO"
             return $true
         }
         else {
-            Write-EnhancedModuleStarterLog -Message "Git installation validation failed." -Level "ERROR"
+            Write-EnhancedLog -Message "Git installation validation failed." -Level "ERROR"
             return $false
         }
     }
     else {
-        Write-EnhancedModuleStarterLog -Message "Failed to start the installation process for Git." -Level "ERROR"
+        Write-EnhancedLog -Message "Failed to start the installation process for Git." -Level "ERROR"
         return $false
     }
 }

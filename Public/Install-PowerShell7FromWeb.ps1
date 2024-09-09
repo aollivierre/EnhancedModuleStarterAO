@@ -4,7 +4,7 @@ function Install-PowerShell7FromWeb {
         [string]$url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"
     )
 
-    Write-EnhancedModuleStarterLog -Message "Attempting to install PowerShell 7 from URL: $url" -Level "INFO"
+    Write-EnhancedLog -Message "Attempting to install PowerShell 7 from URL: $url" -Level "INFO"
 
     $process = Invoke-WebScript -url $url
     if ($process) {
@@ -22,16 +22,16 @@ function Install-PowerShell7FromWeb {
 
         $postValidationResult = Validate-SoftwareInstallation @validationParams
         if ($postValidationResult.IsInstalled -and $postValidationResult.Version -ge $validationParams.MinVersion) {
-            Write-EnhancedModuleStarterLog -Message "PowerShell 7 successfully installed and validated." -Level "INFO"
+            Write-EnhancedLog -Message "PowerShell 7 successfully installed and validated." -Level "INFO"
             return $true
         }
         else {
-            Write-EnhancedModuleStarterLog -Message "PowerShell 7 installation validation failed." -Level "ERROR"
+            Write-EnhancedLog -Message "PowerShell 7 installation validation failed." -Level "ERROR"
             return $false
         }
     }
     else {
-        Write-EnhancedModuleStarterLog -Message "Failed to start the installation process for PowerShell 7." -Level "ERROR"
+        Write-EnhancedLog -Message "Failed to start the installation process for PowerShell 7." -Level "ERROR"
         return $false
     }
 }

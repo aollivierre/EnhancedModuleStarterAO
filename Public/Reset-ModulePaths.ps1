@@ -4,13 +4,13 @@ function Reset-ModulePaths {
 
     begin {
         # Initialization block, typically used for setup tasks
-        Write-EnhancedModuleStarterLog -Message "Initializing Reset-ModulePaths function..." -Level "DEBUG"
+        Write-EnhancedLog -Message "Initializing Reset-ModulePaths function..." -Level "DEBUG"
     }
 
     process {
         try {
             # Log the start of the process
-            Write-EnhancedModuleStarterLog -Message "Resetting module paths to default values..." -Level "INFO"
+            Write-EnhancedLog -Message "Resetting module paths to default values..." -Level "INFO"
 
             # Get the current user's Documents path
             $userModulesPath = [System.IO.Path]::Combine($env:USERPROFILE, 'Documents\WindowsPowerShell\Modules')
@@ -24,16 +24,16 @@ function Reset-ModulePaths {
 
             # Attempt to reset the PSModulePath environment variable
             $env:PSModulePath = [string]::Join(';', $defaultModulePaths)
-            Write-EnhancedModuleStarterLog -Message "PSModulePath successfully set to: $($env:PSModulePath -split ';' | Out-String)" -Level "INFO"
+            Write-EnhancedLog -Message "PSModulePath successfully set to: $($env:PSModulePath -split ';' | Out-String)" -Level "INFO"
 
             # Optionally persist the change for the current user
             [Environment]::SetEnvironmentVariable("PSModulePath", $env:PSModulePath, [EnvironmentVariableTarget]::User)
-            Write-EnhancedModuleStarterLog -Message "PSModulePath environment variable set for the current user." -Level "INFO"
+            Write-EnhancedLog -Message "PSModulePath environment variable set for the current user." -Level "INFO"
         }
         catch {
             # Capture and log any errors that occur during the process
             $errorMessage = $_.Exception.Message
-            Write-EnhancedModuleStarterLog -Message "Error resetting module paths: $errorMessage" -Level "ERROR"
+            Write-EnhancedLog -Message "Error resetting module paths: $errorMessage" -Level "ERROR"
 
             # Optionally, you could throw the error to halt the script
             throw $_
@@ -42,6 +42,6 @@ function Reset-ModulePaths {
 
     end {
         # Finalization block, typically used for cleanup tasks
-        Write-EnhancedModuleStarterLog -Message "Reset-ModulePaths function completed." -Level "DEBUG"
+        Write-EnhancedLog -Message "Reset-ModulePaths function completed." -Level "DEBUG"
     }
 }

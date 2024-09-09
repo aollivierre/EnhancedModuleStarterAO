@@ -12,7 +12,7 @@ function Sanitize-VersionString {
         return $version
     }
     catch {
-        Write-EnhancedModuleStarterLog -Message "Failed to convert version string: $versionString. Error: $_" -Level "ERROR"
+        Write-EnhancedLog -Message "Failed to convert version string: $versionString. Error: $_" -Level "ERROR"
         return $null
     }
 }

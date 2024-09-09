@@ -4,13 +4,13 @@ function Ensure-NuGetProvider {
         if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
             Install-PackageProvider -Name NuGet -Force -Confirm:$false
             Install-Module -Name PowerShellGet -Force -AllowClobber
-            Write-EnhancedModuleStarterLog "NuGet provider installed successfully." -Level "INFO"
+            Write-EnhancedLog "NuGet provider installed successfully." -Level "INFO"
         }
         else {
-            Write-EnhancedModuleStarterLog "NuGet provider is already installed." -Level "INFO"
+            Write-EnhancedLog "NuGet provider is already installed." -Level "INFO"
         }
     }
     else {
-        Write-EnhancedModuleStarterLog "This script is running in PowerShell version $($PSVersionTable.PSVersion) which is not version 5. No action is taken for NuGet" -Level "INFO"
+        Write-EnhancedLog "This script is running in PowerShell version $($PSVersionTable.PSVersion) which is not version 5. No action is taken for NuGet" -Level "INFO"
     }
 }

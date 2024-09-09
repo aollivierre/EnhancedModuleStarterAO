@@ -6,7 +6,7 @@ function Import-EnhancedModules {
 
     # Validate PSD1 file path
     if (-not (Test-Path -Path $modulePsd1Path)) {
-        Write-EnhancedModuleStarterLog "modules.psd1 file not found at path: $modulePsd1Path" -Level "ERROR"
+        Write-EnhancedLog "modules.psd1 file not found at path: $modulePsd1Path" -Level "ERROR"
         throw "modules.psd1 file not found."
     }
 
@@ -23,16 +23,16 @@ function Import-EnhancedModules {
 
     foreach ($moduleName in $modulesToImport) {
         if (-not (Get-Module -ListAvailable -Name $moduleName)) {
-            Write-EnhancedModuleStarterLog "Module $moduleName is not installed. Attempting to install..." -Level "INFO"
+            Write-EnhancedLog "Module $moduleName is not installed. Attempting to install..." -Level "INFO"
             Install-EnhancedModule -ModuleName $moduleName -ScriptPath $ScriptPath
         }
 
-        Write-EnhancedModuleStarterLog "Importing module: $moduleName" -Level "INFO"
+        Write-EnhancedLog "Importing module: $moduleName" -Level "INFO"
         try {
             Import-Module -Name $moduleName -Verbose:$true -Force:$true -Global:$true
         }
         catch {
-            Write-EnhancedModuleStarterLog "Failed to import module $moduleName. Error: $_" -Level "ERROR"
+            Write-EnhancedLog "Failed to import module $moduleName. Error: $_" -Level "ERROR"
         }
     }
 }

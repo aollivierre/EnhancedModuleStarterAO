@@ -45,11 +45,11 @@ function Invoke-ModuleStarter {
 
     # Check and elevate permissions if required
     if (-not $SkipCheckandElevate) {
-        Write-EnhancedModuleStarterLog -Message "Checking and elevating permissions if necessary." -Level "INFO"
+        Write-EnhancedLog -Message "Checking and elevating permissions if necessary." -Level "INFO"
         CheckAndElevate -ElevateIfNotAdmin $true
     }
     else {
-        Write-EnhancedModuleStarterLog -Message "Skipping CheckAndElevate due to SkipCheckandElevate parameter." -Level "INFO"
+        Write-EnhancedLog -Message "Skipping CheckAndElevate due to SkipCheckandElevate parameter." -Level "INFO"
     }
 
     # Initialize environment based on the mode and other parameters
@@ -57,5 +57,5 @@ function Invoke-ModuleStarter {
     Initialize-Environment @initializeParams
 
     # Setup logging
-    Write-EnhancedModuleStarterLog -Message "Script Started in $Mode mode" -Level "INFO"
+    Write-EnhancedLog -Message "Script Started in $Mode mode" -Level "INFO"
 }

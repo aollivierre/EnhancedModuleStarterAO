@@ -3,12 +3,12 @@ function Ensure-ModuleIsLatest {
         [string]$ModuleName
     )
 
-    Write-EnhancedModuleStarterLog -Message "Checking if the latest version of $ModuleName is installed..." -Level "INFO"
+    Write-EnhancedLog -Message "Checking if the latest version of $ModuleName is installed..." -Level "INFO"
 
     try {
 
         if ($SkipCheckandElevate) {
-            Write-EnhancedModuleStarterLog -Message "Skipping CheckAndElevate due to SkipCheckandElevate parameter." -Level "INFO"
+            Write-EnhancedLog -Message "Skipping CheckAndElevate due to SkipCheckandElevate parameter." -Level "INFO"
         }
         else {
             CheckAndElevate -ElevateIfNotAdmin $true
@@ -26,20 +26,20 @@ function Ensure-ModuleIsLatest {
 
         if ($installedModule) {
             if ($installedModule.Version -lt $latestModule.Version) {
-                Write-EnhancedModuleStarterLog -Message "$ModuleName version $($installedModule.Version) is installed, but version $($latestModule.Version) is available. Updating module..." -Level "WARNING"
+                Write-EnhancedLog -Message "$ModuleName version $($installedModule.Version) is installed, but version $($latestModule.Version) is available. Updating module..." -Level "WARNING"
                 Install-Module -Name $ModuleName -Scope AllUsers -Force -SkipPublisherCheck -Verbose
             }
             else {
-                Write-EnhancedModuleStarterLog -Message "The latest version of $ModuleName is already installed. Version: $($installedModule.Version)" -Level "INFO"
+                Write-EnhancedLog -Message "The latest version of $ModuleName is already installed. Version: $($installedModule.Version)" -Level "INFO"
             }
         }
         else {
-            Write-EnhancedModuleStarterLog -Message "$ModuleName is not installed. Installing the latest version $($latestModule.Version)..." -Level "WARNING"
+            Write-EnhancedLog -Message "$ModuleName is not installed. Installing the latest version $($latestModule.Version)..." -Level "WARNING"
             Install-Module -Name $ModuleName -Scope AllUsers -Force -SkipPublisherCheck -Verbose -AllowClobber
         }
     }
     catch {
-        Write-EnhancedModuleStarterLog -Message "Error occurred while checking or installing $ModuleName $_" -Level "ERROR"
+        Write-EnhancedLog -Message "Error occurred while checking or installing $ModuleName $_" -Level "ERROR"
         throw
     }
 }

@@ -5,7 +5,7 @@ function Manage-GitRepositories {
     )
 
     begin {
-        Write-EnhancedModuleStarterLog -Message "Starting Manage-GitRepositories function" -Level "INFO"
+        Write-EnhancedLog -Message "Starting Manage-GitRepositories function" -Level "INFO"
 
         # Initialize lists for tracking repository statuses
         $reposWithPushChanges = [System.Collections.Generic.List[string]]::new()
@@ -13,11 +13,11 @@ function Manage-GitRepositories {
 
         # Validate ModulesBasePath
         if (-not (Test-Path -Path $ModulesBasePath)) {
-            Write-EnhancedModuleStarterLog -Message "Modules base path not found: $ModulesBasePath" -Level "ERROR"
+            Write-EnhancedLog -Message "Modules base path not found: $ModulesBasePath" -Level "ERROR"
             throw "Modules base path not found."
         }
 
-        Write-EnhancedModuleStarterLog -Message "Found modules base path: $ModulesBasePath" -Level "INFO"
+        Write-EnhancedLog -Message "Found modules base path: $ModulesBasePath" -Level "INFO"
 
         # Get the Git path
         $GitPath = Get-GitPath
@@ -47,7 +47,7 @@ function Manage-GitRepositories {
                 $lockFilePath = "$HOME\.gitconfig.lock"
                 if (Test-Path $lockFilePath) {
                     Remove-Item $lockFilePath -Force
-                    Write-EnhancedModuleStarterLog -Message "Removed .gitconfig.lock file for repository $($repo.Name)" -Level "INFO"
+                    Write-EnhancedLog -Message "Removed .gitconfig.lock file for repository $($repo.Name)" -Level "INFO"
                 }
 
                 # Fetch the latest changes with a retry mechanism
@@ -60,20 +60,20 @@ function Manage-GitRepositories {
                 Invoke-GitCommandWithRetry -GitPath $GitPath -Arguments $arguments
 
                 if ($status -match "fatal:") {
-                    Write-EnhancedModuleStarterLog -Message "Error during status check in repository $($repo.Name): $status" -Level "ERROR"
+                    Write-EnhancedLog -Message "Error during status check in repository $($repo.Name): $status" -Level "ERROR"
                     continue
                 }
 
                 $repoStatus = "Up to Date"
                 if ($status -match "Your branch is behind") {
-                    Write-EnhancedModuleStarterLog -Message "Repository $($repo.Name) is behind the remote. Pulling changes..." -Level "INFO"
+                    Write-EnhancedLog -Message "Repository $($repo.Name) is behind the remote. Pulling changes..." -Level "INFO"
                     # Pull changes if needed
                     Invoke-GitCommandWithRetry -GitPath $GitPath -Arguments "pull"
                     $repoStatus = "Pulled"
                 }
 
                 if ($status -match "Your branch is ahead") {
-                    Write-EnhancedModuleStarterLog -Message "Repository $($repo.Name) has unpushed changes." -Level "WARNING"
+                    Write-EnhancedLog -Message "Repository $($repo.Name) has unpushed changes." -Level "WARNING"
                     $reposWithPushChanges.Add($repo.FullName)
                     $repoStatus = "Pending Push"
                 }
@@ -88,17 +88,17 @@ function Manage-GitRepositories {
 
             # Summary of repositories with pending push changes
             if ($reposWithPushChanges.Count -gt 0) {
-                Write-EnhancedModuleStarterLog -Message "The following repositories have pending push changes:" -Level "WARNING"
-                $reposWithPushChanges | ForEach-Object { Write-EnhancedModuleStarterLog -Message $_ -Level "WARNING" }
+                Write-EnhancedLog -Message "The following repositories have pending push changes:" -Level "WARNING"
+                $reposWithPushChanges | ForEach-Object { Write-EnhancedLog -Message $_ -Level "WARNING" }
 
-                Write-EnhancedModuleStarterLog -Message "Please manually commit and push the changes in these repositories." -Level "WARNING"
+                Write-EnhancedLog -Message "Please manually commit and push the changes in these repositories." -Level "WARNING"
             }
             else {
-                Write-EnhancedModuleStarterLog -Message "All repositories are up to date." -Level "INFO"
+                Write-EnhancedLog -Message "All repositories are up to date." -Level "INFO"
             }
         }
         catch {
-            Write-EnhancedModuleStarterLog -Message "An error occurred while managing Git repositories: $_" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred while managing Git repositories: $_" -Level "ERROR"
             throw $_
         }
     }
@@ -119,6 +119,6 @@ function Manage-GitRepositories {
         # Return to the original location
         Set-Location -Path $ModulesBasePath
 
-        Write-EnhancedModuleStarterLog -Message "Manage-GitRepositories function execution completed." -Level "INFO"
+        Write-EnhancedLog -Message "Manage-GitRepositories function execution completed." -Level "INFO"
     }
 }
