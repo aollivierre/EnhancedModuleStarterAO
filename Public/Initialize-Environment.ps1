@@ -109,8 +109,8 @@ function Initialize-Environment {
 
         # Ensure that the latest versions of the essential modules are installed
         Ensure-ModuleIsLatest -ModuleName "PSFramework"
-        Ensure-ModuleIsLatest -ModuleName "EnhancedBoilerPlateAO"
-        Ensure-ModuleIsLatest -ModuleName "EnhancedLoggingAO"
+        # Ensure-ModuleIsLatest -ModuleName "EnhancedBoilerPlateAO"
+        # Ensure-ModuleIsLatest -ModuleName "EnhancedLoggingAO"
 
         # Define the PSD1 file URLs and local paths
         $psd1Url = "https://raw.githubusercontent.com/aollivierre/module-starter/main/Enhanced-modules.psd1"
