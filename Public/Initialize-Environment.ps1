@@ -35,7 +35,7 @@ function Initialize-Environment {
         Setup-GlobalPaths -ModulesBasePath $ModulesBasePath
         # Check if the directory exists and contains any files (not just the directory existence)
         if (-Not (Test-Path "$global:modulesBasePath\*.*")) {
-            Write-EnhancedLog "Modules not found or directory is empty at $global:modulesBasePath. Initiating download..." -Level "INFO"
+            Write-EnhancedLog -Message "Modules not found or directory is empty at $global:modulesBasePath. Initiating download..." -Level "INFO"
             # Download-Modules -scriptDetails $scriptDetails
 
             if (-not $SkipEnhancedModules) {
@@ -60,7 +60,7 @@ function Initialize-Environment {
             }
         }
         else {
-            Write-EnhancedLog "Source Modules already exist at $global:modulesBasePath" -Level "INFO"
+            Write-EnhancedLog -Message "Source Modules already exist at $global:modulesBasePath" -Level "INFO"
         }
 
         # The following block will ONLY run in dev mode
@@ -78,14 +78,14 @@ function Initialize-Environment {
         # Import-Module -Name $global:modulePath -Verbose -Force:$true -Global:$true
 
         # # Log the paths to verify
-        # Write-EnhancedLog "Module Path: $global:modulePath" -Level "INFO"
+        # Write-EnhancedLog -Message "Module Path: $global:modulePath" -Level "INFO"
 
         Write-EnhancedLog -Message "Starting to call Import-LatestModulesLocalRepository..."
         Import-ModulesFromLocalRepository -ModulesFolderPath $global:modulesBasePath
     }
     elseif ($Mode -eq "prod") {
         # Log the start of the process
-        Write-EnhancedLog "Production mode selected. Importing modules..." -Level "INFO"
+        Write-EnhancedLog -Message "Production mode selected. Importing modules..." -Level "INFO"
 
         # Path to the current script
         # $ScriptPath = $MyInvocation.MyCommand.Definition
@@ -124,10 +124,10 @@ function Initialize-Environment {
 
         # Handle third-party PS Gallery modules
         if ($SkipPSGalleryModules) {
-            Write-EnhancedLog "Skipping third-party PS Gallery Modules" -Level "INFO"
+            Write-EnhancedLog -Message "Skipping third-party PS Gallery Modules" -Level "INFO"
         }
         else {
-            Write-EnhancedLog "Starting PS Gallery Module installation" -Level "INFO"
+            Write-EnhancedLog -Message "Starting PS Gallery Module installation" -Level "INFO"
 
             # Re-launch the script in PowerShell 5 if not already running in PS5
             Invoke-InPowerShell5 -ScriptPath $ScriptPath
