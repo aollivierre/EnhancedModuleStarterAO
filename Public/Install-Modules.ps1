@@ -12,14 +12,20 @@ function Install-Modules {
 
     if ($PSVersionTable.PSVersion.Major -eq 5) {
         # Install the NuGet package provider if the condition is met
-        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser
+        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope AllUsers
     }
 
     
     foreach ($module in $Modules) {
         if (-not (Get-Module -ListAvailable -Name $module)) {
             # Install-Module -Name $module -Force -Scope AllUsers
-            Install-Module -Name $module -Force -Scope CurrentUser
+            # Install-Module -Name $module -Force -Scope CurrentUser
+
+            $params = @{
+                ModuleName = "$Module"
+            }
+            Install-ModuleInPS5 @params
+
             Write-EnhancedLog -Message "Module '$module' installed." -Level "INFO" -ForegroundColor
         }
         else {

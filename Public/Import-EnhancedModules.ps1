@@ -12,7 +12,8 @@ function Import-EnhancedModules {
 
 
     # Check if we need to re-launch in PowerShell 5
-    Invoke-InPowerShell5 -ScriptPath $ScriptPath
+    # Invoke-InPowerShell5 -ScriptPath $ScriptPath
+    Invoke-InPowerShell5
 
     # If running in PowerShell 5, reset the module paths and proceed with the rest of the script
     Reset-ModulePaths

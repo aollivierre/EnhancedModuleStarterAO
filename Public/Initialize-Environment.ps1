@@ -93,7 +93,8 @@ function Initialize-Environment {
         
 
         # Re-launch the script in PowerShell 5 if not already running in PS5
-        Invoke-InPowerShell5 -ScriptPath $ScriptPath
+        # Invoke-InPowerShell5 -ScriptPath $ScriptPath
+        # Invoke-InPowerShell5
 
         # Reset the module paths and proceed with the rest of the script in PS5
         Reset-ModulePaths
@@ -130,7 +131,8 @@ function Initialize-Environment {
             Write-EnhancedLog -Message "Starting PS Gallery Module installation" -Level "INFO"
 
             # Re-launch the script in PowerShell 5 if not already running in PS5
-            Invoke-InPowerShell5 -ScriptPath $ScriptPath
+            # Invoke-InPowerShell5 -ScriptPath $ScriptPath
+            # Invoke-InPowerShell5
 
             # Reset the module paths in PS5
             Reset-ModulePaths

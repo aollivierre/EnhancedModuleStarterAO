@@ -41,7 +41,13 @@ function Install-EnhancedModule {
     Write-EnhancedLog "Installing module: $ModuleName in PowerShell 5" -Level "NOTICE"
 
     try {
-        Install-Module -Name $ModuleName -Force -SkipPublisherCheck -Scope AllUsers
+        # Install-Module -Name $ModuleName -Force -SkipPublisherCheck -Scope AllUsers
+
+        $params = @{
+            ModuleName = "$Modulename"
+        }
+        Install-ModuleInPS5 @params
+
         Write-EnhancedLog "Module $ModuleName installed successfully in PowerShell 5." -Level "INFO"
     }
     catch {

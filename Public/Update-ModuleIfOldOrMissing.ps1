@@ -38,9 +38,15 @@ function Update-ModuleIfOldOrMissing {
                     # Remove older versions
                     Remove-OldVersions -ModuleName $ModuleName
 
+
+                    $params = @{
+                        ModuleName = "$Modulename"
+                    }
+                    Install-ModuleInPS5 @params
+
                     # Install the latest version of the module
                     # Install-Module -Name $ModuleName -Force -SkipPublisherCheck -Scope AllUsers
-                    Install-ModuleWithPowerShell5Fallback -ModuleName $ModuleName
+                    # Install-ModuleWithPowerShell5Fallback -ModuleName $ModuleName
 
                     Write-EnhancedLog -Message "$ModuleName has been updated to the latest version." -Level "INFO"
                 }
@@ -52,8 +58,14 @@ function Update-ModuleIfOldOrMissing {
                     Write-EnhancedLog -Message "$ModuleName is not installed. Installing the latest version..." -Level "WARNING"
                     # Install-Module -Name $ModuleName -Force -SkipPublisherCheck -Scope AllUsers
 
-                    $DBG
-                    Install-ModuleWithPowerShell5Fallback -ModuleName $ModuleName
+
+                    $params = @{
+                        ModuleName = "$Modulename"
+                    }
+                    Install-ModuleInPS5 @params
+
+                    # $DBG
+                    # Install-ModuleWithPowerShell5Fallback -ModuleName $ModuleName
                     Write-EnhancedLog -Message "$ModuleName has been installed." -Level "INFO"
                 }
                 "Not Found in Gallery" {

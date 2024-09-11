@@ -79,16 +79,22 @@ function Invoke-ModuleStarter {
     Process {
         try {
             # Install PSFramework module if not installed
-            if (-not $SkipPSGalleryModules) {
-                Write-EnhancedLog -Message "Installing PSFramework module..." -Level 'INFO'
-                Install-Module -Name PSFramework -Scope AllUsers -Force -AllowClobber -SkipPublisherCheck -Verbose
-            }
+            # if (-not $SkipPSGalleryModules) {
+            #     Write-EnhancedLog -Message "Installing PSFramework module..." -Level 'INFO'
+            #     # Install-Module -Name PSFramework -Scope AllUsers -Force -AllowClobber -SkipPublisherCheck -Verbose
+
+            #     $params = @{
+            #         ModuleName = "PSFramework"
+            #     }
+            #     Install-ModuleInPS5 @params
+
+            # }
 
             # Define script details for initialization
             $initializeParams = @{
-                Mode              = $Mode
-                ModulesBasePath   = "C:\code\modulesv2"
-                scriptDetails     = @(
+                Mode            = $Mode
+                ModulesBasePath = "C:\code\modulesv2"
+                scriptDetails   = @(
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubCLI.ps1"; SoftwareName = "GitHub CLI"; MinVersion = [version]"2.54.0" }
                 )

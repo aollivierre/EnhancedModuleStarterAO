@@ -3,7 +3,13 @@ function Ensure-NuGetProvider {
     if ($PSVersionTable.PSVersion.Major -eq 5) {
         if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
             Install-PackageProvider -Name NuGet -Force -Confirm:$false
-            Install-Module -Name PowerShellGet -Force -AllowClobber
+            # Install-Module -Name PowerShellGet -Scope AllUsers -Force -AllowClobber
+
+            $params = @{
+                ModuleName = "PowerShellGet"
+            }
+            Install-ModuleInPS5 @params
+
             Write-EnhancedLog "NuGet provider installed successfully." -Level "INFO"
         }
         else {

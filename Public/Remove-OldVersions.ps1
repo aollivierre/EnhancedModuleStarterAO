@@ -41,7 +41,7 @@ function Remove-OldVersions {
 
                 Write-EnhancedLog -Message "Starting takeown and icacls for $modulePath" -Level "INFO"
                 Write-EnhancedLog -Message "Checking and elevating to admin if needed" -Level "INFO"
-                CheckAndElevate
+                CheckAndElevate -ElevateIfNotAdmin $true
                 & takeown.exe /F $modulePath /A /R
                 & icacls.exe $modulePath /reset
                 & icacls.exe $modulePath /grant "*S-1-5-32-544:F" /inheritance:d /T
