@@ -109,7 +109,7 @@ function Initialize-Environment {
         # Install-Module -Name EnhancedLoggingAO -Force -SkipPublisherCheck -Scope AllUsers -Verbose
 
         # Ensure that the latest versions of the essential modules are installed
-        Ensure-ModuleIsLatest -ModuleName "PSFramework"
+        # Ensure-ModuleIsLatest -ModuleName "PSFramework"
         # Ensure-ModuleIsLatest -ModuleName "EnhancedBoilerPlateAO"
         # Ensure-ModuleIsLatest -ModuleName "EnhancedLoggingAO"
 
