@@ -57,11 +57,10 @@ function Install-ModuleInPS5 {
                 # Splatting for Start-Process
                 $startProcessParams = @{
                     FilePath     = $ps5Path
-                    ArgumentList = "-Command", $ps5Command
+                    ArgumentList = "-NoProfile", "-Command", $ps5Command
                     Wait         = $true
                     NoNewWindow  = $true
                     PassThru     = $true
-                    NoProfile    = $true
                 }
 
                 Write-EnhancedLog -Message "Starting installation of module $ModuleName in PowerShell 5" -Level "INFO"
