@@ -30,9 +30,34 @@ function Remove-OldVersions {
 
     process {
         # Get all versions except the latest one
+        # $allVersions = Get-Module -ListAvailable -Name $ModuleName | Sort-Object Version
+        # $latestVersion = $allVersions | Select-Object -Last 1
+        # $olderVersions = $allVersions | Where-Object { $_.Version -ne $latestVersion.Version }
+
+
+        Write-EnhancedLog -Message "Retrieving all available versions of module: $ModuleName" -Level "INFO"
         $allVersions = Get-Module -ListAvailable -Name $ModuleName | Sort-Object Version
+
+        if ($allVersions -and $allVersions.Count -gt 0) {
+            Write-EnhancedLog -Message "Found $($allVersions.Count) versions of the module: $ModuleName" -Level "INFO"
+        }
+        else {
+            Write-EnhancedLog -Message "No versions of the module: $ModuleName were found." -Level "ERROR"
+            return
+        }
+
+        # Identify the latest version
         $latestVersion = $allVersions | Select-Object -Last 1
+        Write-EnhancedLog -Message "Latest version of the module: $ModuleName is $($latestVersion.Version)" -Level "INFO"
+
+        # Identify the older versions
         $olderVersions = $allVersions | Where-Object { $_.Version -ne $latestVersion.Version }
+        if ($olderVersions.Count -gt 0) {
+            Write-EnhancedLog -Message "Found $($olderVersions.Count) older versions of the module: $ModuleName" -Level "INFO"
+        }
+        else {
+            Write-EnhancedLog -Message "No older versions of the module: $ModuleName found." -Level "INFO"
+        }
 
         foreach ($version in $olderVersions) {
             try {
@@ -48,7 +73,8 @@ function Remove-OldVersions {
                 Remove-Item -Path $modulePath -Recurse -Force -Confirm:$false
 
                 Write-EnhancedLog -Message "Removed $($version.Version) successfully." -Level "INFO"
-            } catch {
+            }
+            catch {
                 Write-EnhancedLog -Message "Failed to remove version $($version.Version) of $ModuleName at $modulePath. Error: $_" -Level "ERROR"
                 Handle-Error -ErrorRecord $_
             }

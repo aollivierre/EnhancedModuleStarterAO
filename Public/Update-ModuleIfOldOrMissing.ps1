@@ -26,6 +26,9 @@ function Update-ModuleIfOldOrMissing {
     begin {
         Write-EnhancedLog -Message "Starting Update-ModuleIfOldOrMissing function for module: $ModuleName" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
+
+        Ensure-NuGetProvider
+
     }
 
     process {
