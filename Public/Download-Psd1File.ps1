@@ -34,6 +34,8 @@ function Download-Psd1File {
         Write-EnhancedLog -Message "Starting Download-Psd1File function" -Level "NOTICE"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
         # Validate destination directory
         $destinationDirectory = [System.IO.Path]::GetDirectoryName($destinationPath)
         if (-not (Test-Path -Path $destinationDirectory)) {
