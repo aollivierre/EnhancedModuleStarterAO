@@ -10,13 +10,15 @@ function Validate-SoftwareInstallation {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Validate-SoftwareInstallation function" -Level "NOTICE"
-        # Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
+       Write-EnhancedLog -Message "Starting Validate-SoftwareInstallation function for $SoftwareName" -Level "NOTICE"
+        # Optionally log parameters here
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         $retryCount = 0
         $validationSucceeded = $false
+        $foundVersion = $null
 
         while ($retryCount -lt $MaxRetries -and -not $validationSucceeded) {
             # Registry-based validation
@@ -32,6 +34,7 @@ function Validate-SoftwareInstallation {
                         $app = Get-ItemProperty -Path $RegistryPath -ErrorAction SilentlyContinue
                         if ($app -and $app.DisplayName -like "*$SoftwareName*") {
                             $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
+                            $foundVersion = $installedVersion
                             if ($installedVersion -ge $MinVersion) {
                                 $validationSucceeded = $true
                                 return @{
@@ -42,14 +45,14 @@ function Validate-SoftwareInstallation {
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     foreach ($path in $registryPaths) {
                         $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
                         foreach ($item in $items) {
                             $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
                             if ($app.DisplayName -like "*$SoftwareName*") {
                                 $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
+                                $foundVersion = $installedVersion
                                 if ($installedVersion -ge $MinVersion) {
                                     $validationSucceeded = $true
                                     return @{
@@ -69,37 +72,40 @@ function Validate-SoftwareInstallation {
                 if (Test-Path $ExePath) {
                     $appVersionString = (Get-ItemProperty -Path $ExePath).VersionInfo.ProductVersion.Split(" ")[0]  # Extract only the version number
                     $appVersion = Sanitize-VersionString -versionString $appVersionString
+                    $foundVersion = $appVersion
 
                     if ($appVersion -ge $MinVersion) {
-                        Write-EnhancedLog -Message "Validation successful: $SoftwareName version $appVersion is installed at $ExePath." -Level "INFO"
+                       Write-EnhancedLog -Message "Validation successful: $SoftwareName version $appVersion is installed at $ExePath." -Level "INFO"
                         return @{
                             IsInstalled = $true
                             Version     = $appVersion
                             Path        = $ExePath
                         }
+                    } else {
+                       Write-EnhancedLog -Message "Validation failed: $SoftwareName version $appVersion does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
                     }
-                    else {
-                        Write-EnhancedLog -Message "Validation failed: $SoftwareName version $appVersion does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
-                    }
-                }
-                else {
-                    Write-EnhancedLog -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "ERROR"
+                } else {
+                   Write-EnhancedLog -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "ERROR"
                 }
             }
 
+            if ($foundVersion) {
+               Write-EnhancedLog -Message "Software $SoftwareName was found with version $foundVersion, but it does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
+            } else {
+               Write-EnhancedLog -Message "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet the minimum requirement ($MinVersion). Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
+            }
+
             $retryCount++
-            Write-EnhancedLog -Message "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet the minimum requirement ($MinVersion). Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
             Start-Sleep -Seconds $DelayBetweenRetries
         }
 
-        return @{ IsInstalled = $false }
+        return @{ IsInstalled = $false; Version = $foundVersion }
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Validate-SoftwareInstallation function" -Level "NOTICE"
+       Write-EnhancedLog -Message "Exiting Validate-SoftwareInstallation function for $SoftwareName" -Level "NOTICE"
     }
 }
-
 
 
 
