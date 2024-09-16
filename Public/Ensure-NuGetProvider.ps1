@@ -16,6 +16,8 @@ function Ensure-NuGetProvider {
 
     Begin {
         Write-EnhancedLog -Message "Starting Ensure-NuGetProvider function" -Level "Notice"
+
+        Reset-ModulePaths
         
         # Log the current PowerShell version
         Write-EnhancedLog -Message "Running PowerShell version: $($PSVersionTable.PSVersion)" -Level "INFO"
