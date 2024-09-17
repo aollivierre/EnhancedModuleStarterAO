@@ -1,4 +1,3 @@
-
 function Authenticate-GitHubCLI {
     <#
     .SYNOPSIS
@@ -28,34 +27,32 @@ function Authenticate-GitHubCLI {
 
     begin {
         Write-EnhancedLog -Message "Starting Authenticate-GitHubCLI function" -Level "NOTICE"
-        # Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     process {
         try {
             Write-EnhancedLog -Message "Authenticating with GitHub CLI..." -Level "INFO"
+            
+            # Define the secrets file path
+            $secretsFilePath = Join-Path -Path $ScriptDirectory -ChildPath "secrets.psd1"
 
-            # Prompt user to choose the authentication method
-            $choice = Read-Host "Select authentication method: 1) Enter GitHub token manually 2) Use secrets file in "$ScriptDirectory""
-
-            if ($choice -eq '1') {
-                # Option 1: Enter GitHub token manually
+            if (-not (Test-Path -Path $secretsFilePath)) {
+                # If the secrets file does not exist, prompt the user to enter the token
+                Write-Warning "Secrets file not found. Please enter your GitHub token."
                 $secureToken = Read-Host "Enter your GitHub token" -AsSecureString
                 $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
                 $token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
                 [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
-                Write-EnhancedLog -Message "Using manually entered GitHub token for authentication." -Level "INFO"
-            }
-            elseif ($choice -eq '2') {
-                # Option 2: Use secrets file in $ScriptDirectory
-                $secretsFilePath = Join-Path -Path $ScriptDirectory -ChildPath "secrets.psd1"
 
-                if (-not (Test-Path -Path $secretsFilePath)) {
-                    $errorMessage = "Secrets file not found at path: $secretsFilePath"
-                    Write-EnhancedLog -Message $errorMessage -Level "ERROR"
-                    throw $errorMessage
+                # Store the token in the secrets.psd1 file
+                $secretsContent = @{
+                    GitHubToken = $token
                 }
-
+                $secretsContent | Export-Clixml -Path $secretsFilePath
+                Write-Host "GitHub token has been saved to $secretsFilePath." -ForegroundColor Green
+            }
+            else {
+                # If the secrets file exists, import it
                 $secrets = Import-PowerShellDataFile -Path $secretsFilePath
                 $token = $secrets.GitHubToken
 
@@ -67,11 +64,6 @@ function Authenticate-GitHubCLI {
 
                 Write-EnhancedLog -Message "Using GitHub token from secrets file for authentication." -Level "INFO"
             }
-            else {
-                $errorMessage = "Invalid selection. Please choose 1 or 2."
-                Write-EnhancedLog -Message $errorMessage -Level "ERROR"
-                throw $errorMessage
-            }
 
             # Check if GitHub CLI is already authenticated
             $authArguments = @("auth", "status", "-h", "github.com")
@@ -80,7 +72,7 @@ function Authenticate-GitHubCLI {
             if ($authStatus -notlike "*Logged in to github.com*") {
                 Write-EnhancedLog -Message "GitHub CLI is not authenticated. Attempting authentication using selected method..." -Level "WARNING"
 
-                # Authenticate using the selected method
+                # Authenticate using the token
                 $loginArguments = @("auth", "login", "--with-token")
                 echo $token | & $GhPath $loginArguments
 
