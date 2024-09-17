@@ -32,36 +32,81 @@ function InstallAndImportModulesPSGallery {
             $importedModules = $moduleData.ImportedModules
             $myModules = $moduleData.MyModules
 
-            # Validate, Install, and Import Modules
+            # Validate and Install Required Modules using jobs for parallel execution
             if ($requiredModules) {
                 Write-EnhancedLog -Message "Installing required modules: $($requiredModules -join ', ')" -Level "INFO"
+
+                # Create jobs for parallel installation
+                $jobs = [System.Collections.Generic.List[PSCustomObject]]::new()  # Create a new List for jobs
                 foreach ($moduleName in $requiredModules) {
-                    try {
-                        Update-ModuleIfOldOrMissing -ModuleName $moduleName
-                        $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
-                        $moduleDetails = [PSCustomObject]@{
-                            Name    = $moduleName
-                            Version = $moduleInfo.Version
-                            Path    = $moduleInfo.ModuleBase
+                    $job = Start-Job -ScriptBlock {
+                        param ($moduleName)
+                
+                        # Run the Update-ModuleIfOldOrMissing in the job
+                        try {
+                            Update-ModuleIfOldOrMissing -ModuleName $moduleName
+                            $status = "Success"
                         }
-                        $successModules.Add($moduleDetails)
-                        Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
-                        $moduleSuccessCount++
+                        catch {
+                            $status = "Failed"
+                        }
+                
+                        # Return module name and status to parent process
+                        [PSCustomObject]@{
+                            ModuleName = $moduleName
+                            Status     = $status
+                        }
+                    } -ArgumentList $moduleName
+                
+                    $jobs.Add($job)  # Use Add method to add the job to the List
+                }
+                
+
+                # Wait for all jobs to complete and gather the results
+                $jobResults = $jobs | ForEach-Object {
+                    $result = Receive-Job -Job $_ -Wait
+                    Remove-Job -Job $_
+                    $result
+                }
+
+                # Process the results
+                foreach ($result in $jobResults) {
+                    $moduleName = $result.ModuleName
+                    if ($result.Status -eq "Success") {
+                        # Fetch module information
+                        $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+
+                        if ($moduleInfo) {
+                            $moduleDetails = [PSCustomObject]@{
+                                Name    = $moduleName
+                                Version = $moduleInfo.Version
+                                Path    = $moduleInfo.ModuleBase
+                            }
+                            $successModules.Add($moduleDetails)
+                            Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
+                            $moduleSuccessCount++
+                        }
+                        else {
+                            Write-EnhancedLog -Message "Module $moduleName was updated but information could not be retrieved." -Level "ERROR"
+                            $moduleFailCount++
+                        }
                     }
-                    catch {
+                    else {
                         $moduleDetails = [PSCustomObject]@{
                             Name    = $moduleName
                             Version = "N/A"
                             Path    = "N/A"
                         }
                         $failedModules.Add($moduleDetails)
-                        Write-EnhancedLog -Message "Failed to install/update module: $moduleName. Error: $_" -Level "ERROR"
+                        Write-EnhancedLog -Message "Failed to install/update module: $moduleName." -Level "ERROR"
                         $moduleFailCount++
                     }
                 }
+
                 Write-EnhancedLog "All module update processes have completed." -Level "NOTICE"
             }
 
+            # Import additional modules from PSD1
             if ($importedModules) {
                 Write-EnhancedLog -Message "Importing modules: $($importedModules -join ', ')" -Level "INFO"
                 foreach ($moduleName in $importedModules) {
@@ -90,6 +135,7 @@ function InstallAndImportModulesPSGallery {
                 }
             }
 
+            # Import custom modules
             if ($myModules) {
                 Write-EnhancedLog -Message "Importing custom modules: $($myModules -join ', ')" -Level "INFO"
                 foreach ($moduleName in $myModules) {
