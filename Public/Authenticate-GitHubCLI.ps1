@@ -21,7 +21,7 @@ function Authenticate-GitHubCLI {
     param (
         [Parameter(Mandatory = $true)]
         [string]$GhPath,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$ScriptDirectory
     )
 

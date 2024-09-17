@@ -6,7 +6,7 @@ function Initialize-Environment {
         [string]$ModulesBasePath, # Custom modules base path,
         [PSCustomObject[]]$scriptDetails,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$ScriptDirectory
     )
 

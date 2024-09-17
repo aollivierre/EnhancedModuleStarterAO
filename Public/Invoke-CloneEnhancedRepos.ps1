@@ -1,7 +1,7 @@
 function Invoke-CloneEnhancedRepos {
     param (
         [PSCustomObject[]]$scriptDetails,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$ScriptDirectory
     )
 

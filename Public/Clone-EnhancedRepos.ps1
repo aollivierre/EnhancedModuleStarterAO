@@ -28,7 +28,7 @@ function Clone-EnhancedRepos {
         [Parameter(Mandatory = $true)]
         [string]$targetDirectory,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$ScriptDirectory
     )
 
