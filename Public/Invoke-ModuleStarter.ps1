@@ -113,6 +113,7 @@ function Invoke-ModuleStarter {
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubCLI.ps1"; SoftwareName = "GitHub CLI"; MinVersion = [version]"2.54.0" }
                 )
+                SkipEnhancedModules = $SkipEnhancedModules
             }
 
             # Conditionally add ScriptDirectory to the hashtable if it is not null or empty

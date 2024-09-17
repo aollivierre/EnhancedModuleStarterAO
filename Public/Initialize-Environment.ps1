@@ -7,7 +7,10 @@ function Initialize-Environment {
         [PSCustomObject[]]$scriptDetails,
 
         [Parameter(Mandatory = $false)]
-        [string]$ScriptDirectory
+        [string]$ScriptDirectory,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Skip installation of enhanced modules.")]
+        [bool]$SkipEnhancedModules = $false,
     )
 
  
@@ -32,7 +35,7 @@ function Initialize-Environment {
         }
        
 
-        $DBG
+        # $DBG
 
         # Call Setup-GlobalPaths with custom paths
         Setup-GlobalPaths -ModulesBasePath $ModulesBasePath
