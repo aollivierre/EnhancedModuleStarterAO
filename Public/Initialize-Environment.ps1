@@ -4,7 +4,10 @@ function Initialize-Environment {
         [string]$Mode, # Accepts either 'dev' or 'prod'
         # [string]$WindowsModulePath, # Path to the Windows module
         [string]$ModulesBasePath, # Custom modules base path,
-        [PSCustomObject[]]$scriptDetails
+        [PSCustomObject[]]$scriptDetails,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptDirectory
     )
 
  
@@ -42,7 +45,7 @@ function Initialize-Environment {
                 # Download-Modules -scriptDetails $scriptDetails
 
                 # Example usage: Call the main function with the script details
-                Invoke-CloneEnhancedRepos -scriptDetails $scriptDetails
+                Invoke-CloneEnhancedRepos -scriptDetails $scriptDetails -ScriptDirectory $ScriptDirectory
 
                 Write-EnhancedLog -Message "Modules downloaded successfully." -Level "INFO"
             }

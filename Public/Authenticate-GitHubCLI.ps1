@@ -5,7 +5,7 @@ function Authenticate-GitHubCLI {
     Authenticates with GitHub CLI using a token provided by the user or from a secrets file.
 
     .DESCRIPTION
-    This function allows the user to authenticate with GitHub CLI by either entering a GitHub token manually or using a token from a secrets file located in the `$PSScriptRoot`.
+    This function allows the user to authenticate with GitHub CLI by either entering a GitHub token manually or using a token from a secrets file located in the `$ScriptDirectory`.
 
     .PARAMETER GhPath
     The path to the GitHub CLI executable (gh.exe).
@@ -21,7 +21,9 @@ function Authenticate-GitHubCLI {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$GhPath
+        [string]$GhPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptDirectory
     )
 
     begin {
@@ -34,7 +36,7 @@ function Authenticate-GitHubCLI {
             Write-EnhancedLog -Message "Authenticating with GitHub CLI..." -Level "INFO"
 
             # Prompt user to choose the authentication method
-            $choice = Read-Host "Select authentication method: 1) Enter GitHub token manually 2) Use secrets file in `$PSScriptRoot"
+            $choice = Read-Host "Select authentication method: 1) Enter GitHub token manually 2) Use secrets file in "$ScriptDirectory""
 
             if ($choice -eq '1') {
                 # Option 1: Enter GitHub token manually
@@ -45,8 +47,8 @@ function Authenticate-GitHubCLI {
                 Write-EnhancedLog -Message "Using manually entered GitHub token for authentication." -Level "INFO"
             }
             elseif ($choice -eq '2') {
-                # Option 2: Use secrets file in $PSScriptRoot
-                $secretsFilePath = Join-Path -Path $PSScriptRoot -ChildPath "secrets.psd1"
+                # Option 2: Use secrets file in $ScriptDirectory
+                $secretsFilePath = Join-Path -Path $ScriptDirectory -ChildPath "secrets.psd1"
 
                 if (-not (Test-Path -Path $secretsFilePath)) {
                     $errorMessage = "Secrets file not found at path: $secretsFilePath"

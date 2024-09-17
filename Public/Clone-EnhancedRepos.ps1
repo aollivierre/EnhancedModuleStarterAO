@@ -26,7 +26,10 @@ function Clone-EnhancedRepos {
         [string]$githubUsername,
 
         [Parameter(Mandatory = $true)]
-        [string]$targetDirectory
+        [string]$targetDirectory,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptDirectory
     )
 
     begin {
@@ -62,7 +65,7 @@ function Clone-EnhancedRepos {
             $ghPath = "C:\Program Files\GitHub CLI\gh.exe"
 
             # Authenticate with GitHub CLI
-            Authenticate-GitHubCLI -GhPath $ghPath
+            Authenticate-GitHubCLI -GhPath $ghPath -ScriptDirectory $ScriptDirectory
 
         
             # Execute the GitHub CLI command using the argument array

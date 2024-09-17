@@ -1,6 +1,8 @@
 function Invoke-CloneEnhancedRepos {
     param (
-        [PSCustomObject[]]$scriptDetails
+        [PSCustomObject[]]$scriptDetails,
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptDirectory
     )
 
     try {
@@ -24,7 +26,7 @@ function Invoke-CloneEnhancedRepos {
         Generate-SoftwareInstallSummaryReport -installationResults $installationResults
 
         # Example invocation to clone repositories:
-        Clone-EnhancedRepos -githubUsername "aollivierre" -targetDirectory "C:\Code\modulesv2"
+        Clone-EnhancedRepos -githubUsername "aollivierre" -targetDirectory "C:\Code\modulesv2" -ScriptDirectory $ScriptDirectory
     }
     catch {
         # Capture the error details

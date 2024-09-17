@@ -54,7 +54,10 @@ function Invoke-ModuleStarter {
         [bool]$SkipEnhancedModules = $false,
 
         [Parameter(Mandatory = $false, HelpMessage = "Skip cloning of Git repositories.")]
-        [bool]$SkipGitRepos = $false
+        [bool]$SkipGitRepos = $false,
+
+         [Parameter(Mandatory = $false, HelpMessage = "Specify the path for the Script Directory to pass files like secrets.psd1")]
+        [string]$ScriptDirectory
     )
 
     Begin {
@@ -98,6 +101,7 @@ function Invoke-ModuleStarter {
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubCLI.ps1"; SoftwareName = "GitHub CLI"; MinVersion = [version]"2.54.0" }
                 )
+                ScriptDirectory = $ScriptDirectory
             }
 
             # Check and elevate permissions if required
