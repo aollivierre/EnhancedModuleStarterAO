@@ -56,7 +56,7 @@ function Invoke-ModuleStarter {
         [Parameter(Mandatory = $false, HelpMessage = "Skip cloning of Git repositories.")]
         [bool]$SkipGitRepos = $false,
 
-         [Parameter(Mandatory = $false, HelpMessage = "Specify the path for the Script Directory to pass files like secrets.psd1")]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the path for the Script Directory to pass files like secrets.psd1")]
         [string]$ScriptDirectory
     )
 
@@ -94,6 +94,18 @@ function Invoke-ModuleStarter {
             # }
 
             # Define script details for initialization
+            # $initializeParams = @{
+            #     Mode            = $Mode
+            #     ModulesBasePath = "C:\code\modulesv2"
+            #     scriptDetails   = @(
+            #         @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
+            #         @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubCLI.ps1"; SoftwareName = "GitHub CLI"; MinVersion = [version]"2.54.0" }
+            #     )
+            #     ScriptDirectory = $ScriptDirectory
+            # }
+
+
+            # Initialize the base hashtable without ScriptDirectory
             $initializeParams = @{
                 Mode            = $Mode
                 ModulesBasePath = "C:\code\modulesv2"
@@ -101,8 +113,13 @@ function Invoke-ModuleStarter {
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
                     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubCLI.ps1"; SoftwareName = "GitHub CLI"; MinVersion = [version]"2.54.0" }
                 )
-                ScriptDirectory = $ScriptDirectory
             }
+
+            # Conditionally add ScriptDirectory to the hashtable if it is not null or empty
+            if ($PSBoundParameters.ContainsKey('ScriptDirectory') -and $ScriptDirectory) {
+                $initializeParams.ScriptDirectory = $ScriptDirectory
+            }
+
 
             # Check and elevate permissions if required
             if (-not $SkipCheckandElevate) {
