@@ -8,4 +8,4 @@ function Is-ServerCore {
     }
 }
 
-Is-ServerCore
+# Is-ServerCore

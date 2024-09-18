@@ -33,19 +33,46 @@ function InstallAndImportModulesPSGallery {
             $myModules = $moduleData.MyModules
 
             # Determine the PowerShell path
-          
             $PwshPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-            
-            
-            # Validate and Install Required Modules using Start-Process for parallel execution
-            if ($requiredModules) {
+
+            # Check if running on Server Core and switch to series execution
+            if (Is-ServerCore) {
+                Write-EnhancedLog -Message "Running on Windows Server Core, switching to series execution." -Level "WARNING"
+
+                # Install required modules in series execution
+                foreach ($moduleName in $requiredModules) {
+                    try {
+                        Update-ModuleIfOldOrMissing -ModuleName $moduleName
+                        $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+
+                        if ($moduleInfo) {
+                            $moduleDetails = [PSCustomObject]@{
+                                Name    = $moduleName
+                                Version = $moduleInfo.Version
+                                Path    = $moduleInfo.ModuleBase
+                            }
+                            $successModules.Add($moduleDetails)
+                            Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
+                            $moduleSuccessCount++
+                        }
+                    } catch {
+                        $moduleDetails = [PSCustomObject]@{
+                            Name    = $moduleName
+                            Version = "N/A"
+                            Path    = "N/A"
+                        }
+                        $failedModules.Add($moduleDetails)
+                        Write-EnhancedLog -Message "Failed to install/update module: $moduleName. Error: $_" -Level "ERROR"
+                        $moduleFailCount++
+                    }
+                }
+            } else {
+                # Install Required Modules in parallel execution
                 Write-EnhancedLog -Message "Installing required modules: $($requiredModules -join ', ')" -Level "INFO"
 
                 $processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 
                 foreach ($moduleName in $requiredModules) {
-                    # Create splatting parameters for Start-Process
-                    # write-host 'v4' -ForegroundColor Blue
                     $splatProcessParams = @{
                         FilePath     = $PwshPath
                         ArgumentList = @(
@@ -55,7 +82,7 @@ function InstallAndImportModulesPSGallery {
                         )
                         NoNewWindow  = $true
                         PassThru     = $true
-                    }                    
+                    }
 
                     # Start the process for parallel execution
                     $process = Start-Process @splatProcessParams
