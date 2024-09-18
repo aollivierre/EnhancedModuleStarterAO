@@ -1,129 +1,12 @@
-function Invoke-ParallelExecution {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string[]]$Modules,
-        [string]$PwshPath
-    )
-    
-    Write-EnhancedLog -Message "Running in parallel execution mode" -Level "INFO"
-    $processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
-
-    foreach ($moduleName in $Modules) {
-        $splatProcessParams = @{
-            FilePath     = $PwshPath
-            ArgumentList = @(
-                "-NoProfile",
-                "-ExecutionPolicy", "Bypass",
-                "-Command", "& { Update-ModuleIfOldOrMissing -ModuleName '$moduleName' }"
-            )
-            NoNewWindow  = $true
-            PassThru     = $true
-        }
-
-        # Start the process for parallel execution
-        $process = Start-Process @splatProcessParams
-        $processList.Add($process)
-    }
-
-    # Wait for all processes to complete
-    foreach ($process in $processList) {
-        $process.WaitForExit()
-    }
-
-    Write-EnhancedLog "All module update processes have completed (parallel execution)." -Level "NOTICE"
-
-    # After parallel execution, validate module installation
-    $successModules = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $failedModules = [System.Collections.Generic.List[PSCustomObject]]::new()
-    foreach ($moduleName in $Modules) {
-        $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
-        if ($moduleInfo) {
-            $moduleDetails = [PSCustomObject]@{
-                Name    = $moduleName
-                Version = $moduleInfo.Version
-                Path    = $moduleInfo.ModuleBase
-            }
-            $successModules.Add($moduleDetails)
-            Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
-        }
-        else {
-            $moduleDetails = [PSCustomObject]@{
-                Name    = $moduleName
-                Version = "N/A"
-                Path    = "N/A"
-            }
-            $failedModules.Add($moduleDetails)
-            Write-EnhancedLog -Message "Failed to install/update module: $moduleName" -Level "ERROR"
-        }
-    }
-
-    return @{
-        SuccessModules = $successModules
-        FailedModules  = $failedModules
-    }
-}
-
-function Invoke-SeriesExecution {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string[]]$Modules
-    )
-
-    Write-EnhancedLog -Message "Running in series execution mode" -Level "INFO"
-
-    foreach ($moduleName in $Modules) {
-        try {
-            Update-ModuleIfOldOrMissing -ModuleName $moduleName
-            Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
-        }
-        catch {
-            Write-EnhancedLog -Message "Failed to install/update module: $moduleName. Error: $_" -Level "ERROR"
-        }
-    }
-
-    Write-EnhancedLog "All module update processes have completed (series execution)." -Level "NOTICE"
-}
-
-function Display-SummaryReport {
-    param (
-        [Parameter(Mandatory = $true)]
-        [int]$ModuleSuccessCount,
-        [int]$ModuleFailCount,
-        [System.Collections.Generic.List[PSCustomObject]]$SuccessModules,
-        [System.Collections.Generic.List[PSCustomObject]]$FailedModules
-    )
-
-    Write-Host "---------- Summary Report ----------" -ForegroundColor Cyan
-    Write-Host "Total Modules Processed: $($ModuleSuccessCount + $ModuleFailCount)" -ForegroundColor Cyan
-    Write-Host "Modules Successfully Processed: $ModuleSuccessCount" -ForegroundColor Green
-    Write-Host "Modules Failed: $ModuleFailCount" -ForegroundColor Red
-
-    if ($SuccessModules.Count -gt 0) {
-        Write-Host "Successful Modules:" -ForegroundColor Green
-        $SuccessModules | Format-Table -Property Name, Version, Path -AutoSize | Out-String | Write-Host
-    }
-
-    if ($FailedModules.Count -gt 0) {
-        Write-Host "Failed Modules:" -ForegroundColor Red
-        $FailedModules | Format-Table -Property Name, Version, Path -AutoSize | Out-String | Write-Host
-    }
-
-    Write-Host "-----------------------------------" -ForegroundColor Cyan
-}
-
 function InstallAndImportModulesPSGallery {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$modulePsd1Path,
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("series", "parallel")]
-        [string]$ExecutionMode
+        [string]$modulePsd1Path
     )
 
     begin {
-        Write-EnhancedLog -Message "Starting InstallAndImportModulesPSGallery function in $ExecutionMode mode" -Level "INFO"
+        Write-EnhancedLog -Message "Starting InstallAndImportModulesPSGallery function" -Level "INFO"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
         # Initialize counters and lists for summary
@@ -149,26 +32,36 @@ function InstallAndImportModulesPSGallery {
             $importedModules = $moduleData.ImportedModules
             $myModules = $moduleData.MyModules
 
-            # Determine the PowerShell path
-            $PwshPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-
-            # Execute in parallel or series mode
-            $executionResult = $null
-            if ($ExecutionMode -eq "parallel" -and -not (Is-ServerCore)) {
-                $executionResult = Invoke-ParallelExecution -Modules $requiredModules -PwshPath $PwshPath
+            # Validate, Install, and Import Modules
+            if ($requiredModules) {
+                Write-EnhancedLog -Message "Installing required modules: $($requiredModules -join ', ')" -Level "INFO"
+                foreach ($moduleName in $requiredModules) {
+                    try {
+                        Update-ModuleIfOldOrMissing -ModuleName $moduleName
+                        $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+                        $moduleDetails = [PSCustomObject]@{
+                            Name    = $moduleName
+                            Version = $moduleInfo.Version
+                            Path    = $moduleInfo.ModuleBase
+                        }
+                        $successModules.Add($moduleDetails)
+                        Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
+                        $moduleSuccessCount++
+                    }
+                    catch {
+                        $moduleDetails = [PSCustomObject]@{
+                            Name    = $moduleName
+                            Version = "N/A"
+                            Path    = "N/A"
+                        }
+                        $failedModules.Add($moduleDetails)
+                        Write-EnhancedLog -Message "Failed to install/update module: $moduleName. Error: $_" -Level "ERROR"
+                        $moduleFailCount++
+                    }
+                }
+                Write-EnhancedLog "All module update processes have completed." -Level "NOTICE"
             }
-            else {
-                Invoke-SeriesExecution -Modules $requiredModules
-            }
 
-            if ($executionResult) {
-                $successModules.AddRange($executionResult.SuccessModules)
-                $failedModules.AddRange($executionResult.FailedModules)
-                $moduleSuccessCount += $executionResult.SuccessModules.Count
-                $moduleFailCount += $executionResult.FailedModules.Count
-            }
-
-            # Import additional modules from PSD1
             if ($importedModules) {
                 Write-EnhancedLog -Message "Importing modules: $($importedModules -join ', ')" -Level "INFO"
                 foreach ($moduleName in $importedModules) {
@@ -197,7 +90,6 @@ function InstallAndImportModulesPSGallery {
                 }
             }
 
-            # Import custom modules
             if ($myModules) {
                 Write-EnhancedLog -Message "Importing custom modules: $($myModules -join ', ')" -Level "INFO"
                 foreach ($moduleName in $myModules) {
@@ -237,14 +129,23 @@ function InstallAndImportModulesPSGallery {
 
     end {
         # Output summary report
-        $summaryParams = @{
-            ModuleSuccessCount = $moduleSuccessCount
-            ModuleFailCount    = $moduleFailCount
-            SuccessModules     = $successModules
-            FailedModules      = $failedModules
+        Write-EnhancedLog -Message "InstallAndImportModulesPSGallery function execution completed." -Level "INFO"
+
+        Write-Host "---------- Summary Report ----------" -ForegroundColor Cyan
+        Write-Host "Total Modules Processed: $($moduleSuccessCount + $moduleFailCount)" -ForegroundColor Cyan
+        Write-Host "Modules Successfully Processed: $moduleSuccessCount" -ForegroundColor Green
+        Write-Host "Modules Failed: $moduleFailCount" -ForegroundColor Red
+
+        if ($successModules.Count -gt 0) {
+            Write-Host "Successful Modules:" -ForegroundColor Green
+            $successModules | Format-Table -Property Name, Version, Path -AutoSize | Out-String | Write-Host
         }
-        
-        Display-SummaryReport @summaryParams
-        
+
+        if ($failedModules.Count -gt 0) {
+            Write-Host "Failed Modules:" -ForegroundColor Red
+            $failedModules | Format-Table -Property Name, Version, Path -AutoSize | Out-String | Write-Host
+        }
+
+        Write-Host "-----------------------------------" -ForegroundColor Cyan
     }
 }

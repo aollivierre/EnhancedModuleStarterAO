@@ -79,7 +79,7 @@ function Initialize-Environment {
         Download-Psd1File -url $psd1Url -destinationPath $localPsd1Path
 
         # Install and import modules based on the PSD1 file
-        InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path -ExecutionMode $ExecutionMode
+        InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path
 
         # Handle third-party PS Gallery modules
         if ($SkipPSGalleryModules) {
@@ -99,7 +99,7 @@ function Initialize-Environment {
             $localPsd1Path = "$env:TEMP\modules.psd1"
     
             Download-Psd1File -url $psd1Url -destinationPath $localPsd1Path
-            InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path -ExecutionMode $ExecutionMode
+            InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path
         }
     }
 }
