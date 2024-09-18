@@ -2,11 +2,15 @@ function InstallAndImportModulesPSGallery {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$modulePsd1Path
+        [string]$modulePsd1Path,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("series", "parallel")]
+        [string]$ExecutionMode
     )
 
     begin {
-        Write-EnhancedLog -Message "Starting InstallAndImportModulesPSGallery function" -Level "INFO"
+        Write-EnhancedLog -Message "Starting InstallAndImportModulesPSGallery function in $ExecutionMode mode" -Level "INFO"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
         # Initialize counters and lists for summary
@@ -35,11 +39,39 @@ function InstallAndImportModulesPSGallery {
             # Determine the PowerShell path
             $PwshPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-            # Check if running on Server Core and switch to series execution
-            if (Is-ServerCore) {
-                Write-EnhancedLog -Message "Running on Windows Server Core, switching to series execution." -Level "WARNING"
+            # Check if we are in dev or prod mode and handle accordingly
+            if ($ExecutionMode -eq "parallel" -and -not (Is-ServerCore)) {
+                # Parallel execution in dev mode (outside Server Core)
+                Write-EnhancedLog -Message "Running in dev mode with parallel execution" -Level "INFO"
+                $processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 
-                # Install required modules in series execution
+                foreach ($moduleName in $requiredModules) {
+                    $splatProcessParams = @{
+                        FilePath     = $PwshPath
+                        ArgumentList = @(
+                            "-NoProfile",
+                            "-ExecutionPolicy", "Bypass",
+                            "-Command", "& { Update-ModuleIfOldOrMissing -ModuleName '$moduleName' }"
+                        )
+                        NoNewWindow  = $true
+                        PassThru     = $true
+                    }
+
+                    # Start the process for parallel execution
+                    $process = Start-Process @splatProcessParams
+                    $processList.Add($process)
+                }
+
+                # Wait for all processes to complete
+                foreach ($process in $processList) {
+                    $process.WaitForExit()
+                }
+
+                Write-EnhancedLog "All module update processes have completed (parallel execution)." -Level "NOTICE"
+            } else {
+                # Series execution in both prod mode and Server Core in dev mode
+                Write-EnhancedLog -Message "Running in $ExecutionMode mode with series execution" -Level "INFO"
+
                 foreach ($moduleName in $requiredModules) {
                     try {
                         Update-ModuleIfOldOrMissing -ModuleName $moduleName
@@ -66,61 +98,6 @@ function InstallAndImportModulesPSGallery {
                         $moduleFailCount++
                     }
                 }
-            } else {
-                # Install Required Modules in parallel execution
-                Write-EnhancedLog -Message "Installing required modules: $($requiredModules -join ', ')" -Level "INFO"
-
-                $processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
-
-                foreach ($moduleName in $requiredModules) {
-                    $splatProcessParams = @{
-                        FilePath     = $PwshPath
-                        ArgumentList = @(
-                            "-NoProfile",
-                            "-ExecutionPolicy", "Bypass",
-                            "-Command", "& { Update-ModuleIfOldOrMissing -ModuleName '$moduleName' }"
-                        )
-                        NoNewWindow  = $true
-                        PassThru     = $true
-                    }
-
-                    # Start the process for parallel execution
-                    $process = Start-Process @splatProcessParams
-                    $processList.Add($process)
-                }
-
-                # Wait for all processes to complete
-                foreach ($process in $processList) {
-                    $process.WaitForExit()
-                }
-
-                # Process the results after all processes have completed
-                foreach ($moduleName in $requiredModules) {
-                    $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
-
-                    if ($moduleInfo) {
-                        $moduleDetails = [PSCustomObject]@{
-                            Name    = $moduleName
-                            Version = $moduleInfo.Version
-                            Path    = $moduleInfo.ModuleBase
-                        }
-                        $successModules.Add($moduleDetails)
-                        Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
-                        $moduleSuccessCount++
-                    }
-                    else {
-                        $moduleDetails = [PSCustomObject]@{
-                            Name    = $moduleName
-                            Version = "N/A"
-                            Path    = "N/A"
-                        }
-                        $failedModules.Add($moduleDetails)
-                        Write-EnhancedLog -Message "Failed to install/update module: $moduleName." -Level "ERROR"
-                        $moduleFailCount++
-                    }
-                }
-
-                Write-EnhancedLog "All module update processes have completed." -Level "NOTICE"
             }
 
             # Import additional modules from PSD1

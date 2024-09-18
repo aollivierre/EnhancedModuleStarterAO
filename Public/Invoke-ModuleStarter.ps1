@@ -57,7 +57,10 @@ function Invoke-ModuleStarter {
         [bool]$SkipGitRepos = $false,
 
         [Parameter(Mandatory = $false, HelpMessage = "Specify the path for the Script Directory to pass files like secrets.psd1")]
-        [string]$ScriptDirectory
+        [string]$ScriptDirectory,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the execution mode for installing modules either in parallel or in series")]
+        [string]$ExecutionMode
     )
 
     Begin {
@@ -81,29 +84,6 @@ function Invoke-ModuleStarter {
 
     Process {
         try {
-            # Install PSFramework module if not installed
-            # if (-not $SkipPSGalleryModules) {
-            #     Write-EnhancedLog -Message "Installing PSFramework module..." -Level 'INFO'
-            #     # Install-Module -Name PSFramework -Scope AllUsers -Force -AllowClobber -SkipPublisherCheck -Verbose
-
-            #     $params = @{
-            #         ModuleName = "PSFramework"
-            #     }
-            #     Install-ModuleInPS5 @params
-
-            # }
-
-            # Define script details for initialization
-            # $initializeParams = @{
-            #     Mode            = $Mode
-            #     ModulesBasePath = "C:\code\modulesv2"
-            #     scriptDetails   = @(
-            #         @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
-            #         @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubCLI.ps1"; SoftwareName = "GitHub CLI"; MinVersion = [version]"2.54.0" }
-            #     )
-            #     ScriptDirectory = $ScriptDirectory
-            # }
-
 
             # Initialize the base hashtable without ScriptDirectory
             $initializeParams = @{
@@ -119,6 +99,11 @@ function Invoke-ModuleStarter {
             # Conditionally add ScriptDirectory to the hashtable if it is not null or empty
             if ($PSBoundParameters.ContainsKey('ScriptDirectory') -and $ScriptDirectory) {
                 $initializeParams.ScriptDirectory = $ScriptDirectory
+            }
+
+
+            if ($PSBoundParameters.ContainsKey('ExecutionMode') -and $ExecutionMode) {
+                $initializeParams.ExecutionMode = $ExecutionMode
             }
 
 

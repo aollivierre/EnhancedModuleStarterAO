@@ -2,6 +2,7 @@
 function Initialize-Environment {
     param (
         [string]$Mode, # Accepts either 'dev' or 'prod'
+        [string]$ExecutionMode, # Accepts either 'parallel' or 'series'
         # [string]$WindowsModulePath, # Path to the Windows module
         [string]$ModulesBasePath, # Custom modules base path,
         [PSCustomObject[]]$scriptDetails,
@@ -12,11 +13,9 @@ function Initialize-Environment {
         [Parameter(Mandatory = $false, HelpMessage = "Skip installation of enhanced modules.")]
         [bool]$SkipEnhancedModules = $false
     )
-
  
     if ($Mode -eq "dev") {
-
-
+        
         $gitInstalled = Ensure-GitIsInstalled
         if ($gitInstalled) {
             Write-EnhancedLog -Message "Git installation check completed successfully." -Level "INFO"
@@ -24,7 +23,6 @@ function Initialize-Environment {
         else {
             Write-EnhancedLog -Message "Failed to install Git." -Level "ERROR"
         }
-
 
         if (-not $SkipGitRepos) {
             Manage-GitRepositories -ModulesBasePath 'C:\Code\modulesv2'
@@ -34,9 +32,6 @@ function Initialize-Environment {
             Write-EnhancedLog -Message "Skipping Git Repos" -Level "INFO"
         }
        
-
-        # $DBG
-
         # Call Setup-GlobalPaths with custom paths
         Setup-GlobalPaths -ModulesBasePath $ModulesBasePath
         # Check if the directory exists and contains any files (not just the directory existence)
@@ -56,10 +51,6 @@ function Initialize-Environment {
                 Write-EnhancedLog -Message "Skipping module download as per the provided parameter." -Level "INFO"
             }
 
-            # The rest of your script continues here...
-
-
-
             # Re-check after download attempt
             if (-Not (Test-Path "$global:modulesBasePath\*.*")) {
                 throw "Download failed or the modules were not placed in the expected directory."
@@ -69,23 +60,6 @@ function Initialize-Environment {
             Write-EnhancedLog -Message "Source Modules already exist at $global:modulesBasePath" -Level "INFO"
         }
 
-        # The following block will ONLY run in dev mode
-        # Construct the paths dynamically using the base paths
-
-        # $modulePath = Join-Path -Path $global:modulesBasePath -ChildPath $WindowsModulePath
-        # $global:modulePath = $modulePath
-
-        # # Re-check that the module exists before attempting to import
-        # if (-Not (Test-Path $global:modulePath)) {
-        #     throw "The specified module '$global:modulePath' does not exist after download. Cannot import module."
-        # }
-
-        # # Import the module using the dynamically constructed path
-        # Import-Module -Name $global:modulePath -Verbose -Force:$true -Global:$true
-
-        # # Log the paths to verify
-        # Write-EnhancedLog -Message "Module Path: $global:modulePath" -Level "INFO"
-
         Write-EnhancedLog -Message "Starting to call Import-LatestModulesLocalRepository..."
         Import-ModulesFromLocalRepository -ModulesFolderPath $global:modulesBasePath
     }
@@ -93,31 +67,9 @@ function Initialize-Environment {
         # Log the start of the process
         Write-EnhancedLog -Message "Production mode selected. Importing modules..." -Level "INFO"
 
-        # Path to the current script
-        # $ScriptPath = $MyInvocation.MyCommand.Definition
-
-        
-
-        # Re-launch the script in PowerShell 5 if not already running in PS5
-        # Invoke-InPowerShell5 -ScriptPath $ScriptPath
-        # Invoke-InPowerShell5
-
-        # Reset the module paths and proceed with the rest of the script in PS5
         Reset-ModulePaths
-
         # Ensure NuGet provider is installed
         Ensure-NuGetProvider
-
-        
-
-        # # Install essential modules
-        # Install-Module -Name EnhancedBoilerPlateAO -Force -SkipPublisherCheck -Scope AllUsers -Verbose
-        # Install-Module -Name EnhancedLoggingAO -Force -SkipPublisherCheck -Scope AllUsers -Verbose
-
-        # Ensure that the latest versions of the essential modules are installed
-        # Ensure-ModuleIsLatest -ModuleName "PSFramework"
-        # Ensure-ModuleIsLatest -ModuleName "EnhancedBoilerPlateAO"
-        # Ensure-ModuleIsLatest -ModuleName "EnhancedLoggingAO"
 
         # Define the PSD1 file URLs and local paths
         $psd1Url = "https://raw.githubusercontent.com/aollivierre/module-starter/main/Enhanced-modules.psd1"
@@ -127,7 +79,7 @@ function Initialize-Environment {
         Download-Psd1File -url $psd1Url -destinationPath $localPsd1Path
 
         # Install and import modules based on the PSD1 file
-        InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path
+        InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path -ExecutionMode $ExecutionMode
 
         # Handle third-party PS Gallery modules
         if ($SkipPSGalleryModules) {
@@ -135,10 +87,6 @@ function Initialize-Environment {
         }
         else {
             Write-EnhancedLog -Message "Starting PS Gallery Module installation" -Level "INFO"
-
-            # Re-launch the script in PowerShell 5 if not already running in PS5
-            # Invoke-InPowerShell5 -ScriptPath $ScriptPath
-            # Invoke-InPowerShell5
 
             # Reset the module paths in PS5
             Reset-ModulePaths
@@ -151,8 +99,7 @@ function Initialize-Environment {
             $localPsd1Path = "$env:TEMP\modules.psd1"
     
             Download-Psd1File -url $psd1Url -destinationPath $localPsd1Path
-            InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path
+            InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path -ExecutionMode $ExecutionMode
         }
-
     }
 }
