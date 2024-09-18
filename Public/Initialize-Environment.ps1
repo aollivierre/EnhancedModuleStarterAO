@@ -10,7 +10,7 @@ function Initialize-Environment {
         [string]$ScriptDirectory,
 
         [Parameter(Mandatory = $false, HelpMessage = "Skip installation of enhanced modules.")]
-        [bool]$SkipEnhancedModules = $false,
+        [bool]$SkipEnhancedModules = $false
     )
 
  

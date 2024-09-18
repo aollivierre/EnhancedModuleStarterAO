@@ -32,64 +32,54 @@ function InstallAndImportModulesPSGallery {
             $importedModules = $moduleData.ImportedModules
             $myModules = $moduleData.MyModules
 
-            # Validate and Install Required Modules using jobs for parallel execution
+            # Determine the PowerShell path
+          
+            $PwshPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+            
+            
+            # Validate and Install Required Modules using Start-Process for parallel execution
             if ($requiredModules) {
                 Write-EnhancedLog -Message "Installing required modules: $($requiredModules -join ', ')" -Level "INFO"
 
-                # Create jobs for parallel installation
-                $jobs = [System.Collections.Generic.List[PSCustomObject]]::new()  # Create a new List for jobs
+                $processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
+
                 foreach ($moduleName in $requiredModules) {
-                    $job = Start-Job -ScriptBlock {
-                        param ($moduleName)
-                
-                        # Run the Update-ModuleIfOldOrMissing in the job
-                        try {
-                            Update-ModuleIfOldOrMissing -ModuleName $moduleName
-                            $status = "Success"
-                        }
-                        catch {
-                            $status = "Failed"
-                        }
-                
-                        # Return module name and status to parent process
-                        [PSCustomObject]@{
-                            ModuleName = $moduleName
-                            Status     = $status
-                        }
-                    } -ArgumentList $moduleName
-                
-                    $jobs.Add($job)  # Use Add method to add the job to the List
-                }
-                
+                    # Create splatting parameters for Start-Process
+                    # write-host 'v4' -ForegroundColor Blue
+                    $splatProcessParams = @{
+                        FilePath     = $PwshPath
+                        ArgumentList = @(
+                            "-NoProfile",
+                            "-ExecutionPolicy", "Bypass",
+                            "-Command", "& { Update-ModuleIfOldOrMissing -ModuleName '$moduleName' }"
+                        )
+                        NoNewWindow  = $true
+                        PassThru     = $true
+                    }                    
 
-                # Wait for all jobs to complete and gather the results
-                $jobResults = $jobs | ForEach-Object {
-                    $result = Receive-Job -Job $_ -Wait
-                    Remove-Job -Job $_
-                    $result
+                    # Start the process for parallel execution
+                    $process = Start-Process @splatProcessParams
+                    $processList.Add($process)
                 }
 
-                # Process the results
-                foreach ($result in $jobResults) {
-                    $moduleName = $result.ModuleName
-                    if ($result.Status -eq "Success") {
-                        # Fetch module information
-                        $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+                # Wait for all processes to complete
+                foreach ($process in $processList) {
+                    $process.WaitForExit()
+                }
 
-                        if ($moduleInfo) {
-                            $moduleDetails = [PSCustomObject]@{
-                                Name    = $moduleName
-                                Version = $moduleInfo.Version
-                                Path    = $moduleInfo.ModuleBase
-                            }
-                            $successModules.Add($moduleDetails)
-                            Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
-                            $moduleSuccessCount++
+                # Process the results after all processes have completed
+                foreach ($moduleName in $requiredModules) {
+                    $moduleInfo = Get-Module -Name $moduleName -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+
+                    if ($moduleInfo) {
+                        $moduleDetails = [PSCustomObject]@{
+                            Name    = $moduleName
+                            Version = $moduleInfo.Version
+                            Path    = $moduleInfo.ModuleBase
                         }
-                        else {
-                            Write-EnhancedLog -Message "Module $moduleName was updated but information could not be retrieved." -Level "ERROR"
-                            $moduleFailCount++
-                        }
+                        $successModules.Add($moduleDetails)
+                        Write-EnhancedLog -Message "Successfully installed/updated module: $moduleName" -Level "INFO"
+                        $moduleSuccessCount++
                     }
                     else {
                         $moduleDetails = [PSCustomObject]@{
