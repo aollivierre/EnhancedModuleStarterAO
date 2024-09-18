@@ -63,7 +63,6 @@ function Invoke-ParallelExecution {
     }
 }
 
-
 function Invoke-SeriesExecution {
     param (
         [Parameter(Mandatory = $true)]
