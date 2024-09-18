@@ -39,7 +39,7 @@ function Invoke-ModuleStarter {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false, HelpMessage = "Specify the script mode (dev, prod, etc.).")]
-        [string]$Mode = "dev",
+        [string]$Mode,
 
         [Parameter(Mandatory = $false, HelpMessage = "Skip installation of modules from PowerShell Gallery.")]
         [bool]$SkipPSGalleryModules = $false,
