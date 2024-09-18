@@ -2,7 +2,7 @@
 function Initialize-Environment {
     param (
         [string]$Mode, # Accepts either 'dev' or 'prod'
-        [string]$ExecutionMode, # Accepts either 'parallel' or 'series'
+        # [string]$ExecutionMode, # Accepts either 'parallel' or 'series'
         # [string]$WindowsModulePath, # Path to the Windows module
         [string]$ModulesBasePath, # Custom modules base path,
         [PSCustomObject[]]$scriptDetails,

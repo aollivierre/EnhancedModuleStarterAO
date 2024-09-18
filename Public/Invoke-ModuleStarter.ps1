@@ -102,9 +102,9 @@ function Invoke-ModuleStarter {
             }
 
 
-            if ($PSBoundParameters.ContainsKey('ExecutionMode') -and $ExecutionMode) {
-                $initializeParams.ExecutionMode = $ExecutionMode
-            }
+            # if ($PSBoundParameters.ContainsKey('ExecutionMode') -and $ExecutionMode) {
+            #     $initializeParams.ExecutionMode = $ExecutionMode
+            # }
 
 
             # Check and elevate permissions if required
