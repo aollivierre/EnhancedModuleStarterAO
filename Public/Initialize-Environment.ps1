@@ -69,17 +69,17 @@ function Initialize-Environment {
 
         Reset-ModulePaths
         # Ensure NuGet provider is installed
-        Ensure-NuGetProvider
+        # Ensure-NuGetProvider
 
         # Define the PSD1 file URLs and local paths
-        $psd1Url = "https://raw.githubusercontent.com/aollivierre/module-starter/main/Enhanced-modules.psd1"
-        $localPsd1Path = "$env:TEMP\enhanced-modules.psd1"
+        # $psd1Url = "https://raw.githubusercontent.com/aollivierre/module-starter/main/Enhanced-modules.psd1"
+        # $localPsd1Path = "$env:TEMP\enhanced-modules.psd1"
 
         # Download the PSD1 file
-        Download-Psd1File -url $psd1Url -destinationPath $localPsd1Path
+        # Download-Psd1File -url $psd1Url -destinationPath $localPsd1Path
 
         # Install and import modules based on the PSD1 file
-        InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path
+        # InstallAndImportModulesPSGallery -modulePsd1Path $localPsd1Path
 
         # Handle third-party PS Gallery modules
         if ($SkipPSGalleryModules) {
@@ -92,7 +92,7 @@ function Initialize-Environment {
             Reset-ModulePaths
 
             # Ensure NuGet provider is installed
-            Ensure-NuGetProvider
+            # Ensure-NuGetProvider
 
             # Download and process the third-party modules PSD1 file
             $psd1Url = "https://raw.githubusercontent.com/aollivierre/module-starter/main/modules.psd1"
