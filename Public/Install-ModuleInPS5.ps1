@@ -28,9 +28,9 @@ function Install-ModuleInPS5 {
         Write-EnhancedLog -Message "Starting Install-ModuleInPS5 function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
-        Reset-ModulePaths
+        # Reset-ModulePaths
 
-        CheckAndElevate -ElevateIfNotAdmin $true
+        # CheckAndElevate -ElevateIfNotAdmin $true
 
         # Path to PowerShell 5
         $ps5Path = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"

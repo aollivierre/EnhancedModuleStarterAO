@@ -89,7 +89,7 @@ function Initialize-Environment {
             Write-EnhancedLog -Message "Starting PS Gallery Module installation" -Level "INFO"
 
             # Reset the module paths in PS5
-            Reset-ModulePaths
+            # Reset-ModulePaths
 
             # Ensure NuGet provider is installed
             # Ensure-NuGetProvider
