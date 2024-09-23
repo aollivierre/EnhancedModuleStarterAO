@@ -163,6 +163,17 @@ function Validate-SoftwareInstallation {
     }
 
     End {
+
+        # To increase robustness we will be also calling PSADT https://psappdeploytoolkit.com/docs/reference/functions/Get-InstalledApplication below here to get the app info
+        # Get-InstalledApplication -name $SoftwareName -Verbose:$false
+        # $applicationInfo = Get-InstalledApplication -Name "Git" -Verbose:$false
+        # $applicationInfo | Format-List
+
+        # $null = Get-InstalledApplication -Name $SoftwareName
+        $applicationInfo = Get-InstalledApplication -Name $SoftwareName -exact
+        $applicationInfo | Format-List
+
+
         Write-EnhancedLog -Message "Exiting Validate-SoftwareInstallation function for $SoftwareName." -Level "NOTICE"
     }
 }
