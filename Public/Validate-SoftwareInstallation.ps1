@@ -1,65 +1,185 @@
-function Validate-SoftwareInstallation {
-    <#
-    .SYNOPSIS
-    Validates the installation of a specified software by checking registry or file-based versions.
-
-    .DESCRIPTION
-    The function checks if the specified software is installed, either through registry validation or file-based validation, and ensures that the installed version meets a specified minimum version. Supports retries in case of transient issues.
-
-    .PARAMETER SoftwareName
-    The name of the software to validate.
-
-    .PARAMETER MinVersion
-    The minimum version of the software required for validation.
-
-    .PARAMETER RegistryPath
-    The specific registry path to validate the software installation.
-
-    .PARAMETER ExePath
-    The path to the executable file of the software for file-based validation.
-
-    .PARAMETER MaxRetries
-    The maximum number of retry attempts for validation.
-
-    .PARAMETER DelayBetweenRetries
-    The delay in seconds between retry attempts.
-
-    .EXAMPLE
-    $params = @{
-        SoftwareName        = 'MySoftware'
-        MinVersion          = '1.0.0.0'
-        RegistryPath        = 'HKLM:\SOFTWARE\MySoftware'
-        ExePath             = 'C:\Program Files\MySoftware\mysoftware.exe'
-        MaxRetries          = 3
-        DelayBetweenRetries = 5
-    }
-    Validate-SoftwareInstallation @params
-    #>
-
-    [CmdletBinding()]
+#v6 Refactored
+function Compare-SoftwareVersion {
     param (
-        [Parameter(Mandatory = $true, HelpMessage = "Provide the software name.")]
-        [ValidateNotNullOrEmpty()]
-        [string]$SoftwareName,
+        [Parameter(Mandatory = $true)]
+        [version]$InstalledVersion,
 
-        [Parameter(Mandatory = $false, HelpMessage = "Provide the minimum software version required.")]
-        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory = $false)]
         [version]$MinVersion = [version]"0.0.0.0",
 
-        [Parameter(Mandatory = $false, HelpMessage = "Specify a registry path for validation.")]
-        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory = $false)]
+        [version]$LatestVersion
+    )
+
+    $meetsMinRequirement = $InstalledVersion -ge $MinVersion
+    
+    if ($LatestVersion) {
+        $isUpToDate = $InstalledVersion -ge $LatestVersion
+    } else {
+        $isUpToDate = $meetsMinRequirement
+    }
+
+    return [PSCustomObject]@{
+        MeetsMinRequirement = $meetsMinRequirement
+        IsUpToDate          = $isUpToDate
+        Timestamp           = (Get-Date).ToString("o")
+    }
+}
+
+function Test-SoftwareInstallation {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$SoftwareName,
+
+        [Parameter(Mandatory = $false)]
         [string]$RegistryPath = "",
 
-        [Parameter(Mandatory = $false, HelpMessage = "Specify the path to the software executable for validation.")]
-        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory = $false)]
+        [string]$ExePath = ""
+    )
+
+    $uniqueId = [Guid]::NewGuid().ToString()
+    $envVarName = "SoftwareInstallationStatus_$uniqueId"
+
+    # Initialize the result object with all expected properties
+    $result = [PSCustomObject]@{
+        IsInstalled         = $false
+        Version             = $null
+        InstallationPath    = $null
+        Status              = "Not Found"
+        Message             = "Software $SoftwareName not found."
+        ErrorMessage        = $null
+        ExitCode            = 1
+        Timestamp           = (Get-Date).ToString("o")  # ISO 8601 format
+        AttemptCount        = 1
+        ValidationSource    = "None"
+        MeetsMinRequirement = $false  # Add these properties here
+        IsUpToDate          = $false  # Add these properties here
+    }
+
+    if ($RegistryPath) {
+        Write-EnhancedLog -Message "Checking specific registry path: $RegistryPath." -Level "INFO"
+        if (Test-Path $RegistryPath) {
+            $app = Get-ItemProperty -Path $RegistryPath -ErrorAction SilentlyContinue
+            if ($app -and $app.DisplayName -like "*$SoftwareName*") {
+                $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
+                $result.IsInstalled = $true
+                $result.Version = $installedVersion
+
+                # Check if InstallLocation exists and is populated, otherwise fallback to ExePath
+                if ($app.PSObject.Properties['InstallLocation'] -and $app.InstallLocation) {
+                    $result.InstallationPath = $app.InstallLocation
+                } elseif ($ExePath -and (Test-Path $ExePath)) {  # Corrected line
+                    Write-EnhancedLog -Message "InstallLocation is not found or empty, using ExePath: $ExePath." -Level "WARNING"
+                    $result.InstallationPath = $ExePath
+                } else {
+                    Write-EnhancedLog -Message "Both InstallLocation and ExePath are not valid for $SoftwareName." -Level "ERROR"
+                    $result.ErrorMessage = "Cannot determine installation path."
+                    $result.Status = "Failed"
+                    $result.Message = "Installation path could not be determined."
+                    $result.ExitCode = 2
+                }
+
+                $result.Status = "Success"
+                $result.Message = "$SoftwareName is installed. Version: $installedVersion"
+                $result.ExitCode = 0  # Indicating success
+                $result.ValidationSource = "CustomRegistryPath"
+
+                $jsonResult = $result | ConvertTo-Json -Compress
+                [System.Environment]::SetEnvironmentVariable($envVarName, $jsonResult, "Process")
+                
+                return $result
+            } else {
+                $result.ErrorMessage = "Software $SoftwareName not found in the custom registry path."
+                $result.Status = "Not Found"
+                $result.Message = "Software $SoftwareName not found in the custom registry path."
+                $result.ExitCode = 1
+            }
+        } else {
+            Write-EnhancedLog -Message "Custom registry path $RegistryPath does not exist." -Level "ERROR"
+            $result.ErrorMessage = "Registry path $RegistryPath does not exist."
+            $result.Status = "Failed"
+            $result.Message = "Registry path $RegistryPath does not exist."
+            $result.ExitCode = 2  # Indicating failure due to missing path
+        }
+
+        $jsonResult = $result | ConvertTo-Json -Compress
+        [System.Environment]::SetEnvironmentVariable($envVarName, $jsonResult, "Process")
+        
+        return $result
+    }
+
+    # If no custom registry path is provided, fall back to default registry locations
+    $registryPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+    )
+
+    foreach ($path in $registryPaths) {
+        $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+        foreach ($item in $items) {
+            $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
+            if ($app.DisplayName -like "*$SoftwareName*") {
+                $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
+                $result.IsInstalled = $true
+                $result.Version = $installedVersion
+
+                # Check if InstallLocation exists and is populated, otherwise fallback to ExePath
+                if ($app.PSObject.Properties['InstallLocation'] -and $app.InstallLocation) {
+                    $result.InstallationPath = $app.InstallLocation
+                } elseif ($ExePath -and (Test-Path $ExePath)) {  # Corrected line
+                    Write-EnhancedLog -Message "InstallLocation is not found or empty, using ExePath: $ExePath." -Level "WARNING"
+                    $result.InstallationPath = $ExePath
+                } else {
+                    Write-EnhancedLog -Message "Both InstallLocation and ExePath are not valid for $SoftwareName." -Level "ERROR"
+                    $result.ErrorMessage = "Cannot determine installation path."
+                    $result.Status = "Failed"
+                    $result.Message = "Installation path could not be determined."
+                    $result.ExitCode = 2
+                }
+
+                $result.Status = "Success"
+                $result.Message = "$SoftwareName is installed. Version: $installedVersion"
+                $result.ExitCode = 0  # Indicating success
+                $result.ValidationSource = "Registry"
+
+                $jsonResult = $result | ConvertTo-Json -Compress
+                [System.Environment]::SetEnvironmentVariable($envVarName, $jsonResult, "Process")
+                
+                return $result
+            }
+        }
+    }
+
+    # If no software was found in any registry path
+    $jsonResult = $result | ConvertTo-Json -Compress
+    [System.Environment]::SetEnvironmentVariable($envVarName, $jsonResult, "Process")
+    
+    return $result
+}
+
+function Validate-SoftwareInstallation {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$SoftwareName,
+
+        [Parameter(Mandatory = $false)]
+        [version]$MinVersion = [version]"0.0.0.0",
+
+        [Parameter(Mandatory = $false)]
+        [version]$LatestVersion,
+
+        [Parameter(Mandatory = $false)]
+        [string]$RegistryPath = "",
+
+        [Parameter(Mandatory = $false)]
         [string]$ExePath = "",
 
-        [Parameter(Mandatory = $false, HelpMessage = "Maximum number of retries for validation.")]
-        [ValidateRange(1, 10)]
+        [Parameter(Mandatory = $false)]
         [int]$MaxRetries = 3,
 
-        [Parameter(Mandatory = $false, HelpMessage = "Delay in seconds between retries.")]
-        [ValidateRange(1, 60)]
+        [Parameter(Mandatory = $false)]
         [int]$DelayBetweenRetries = 5
     )
 
@@ -70,110 +190,67 @@ function Validate-SoftwareInstallation {
 
     Process {
         $retryCount = 0
-        $validationSucceeded = $false
-        $foundVersion = $null
+        $isInstalled = $false
+        $installedVersion = $null
 
-        while ($retryCount -lt $MaxRetries -and -not $validationSucceeded) {
-            # Registry-based validation
-            if ($RegistryPath -or $SoftwareName) {
-                Write-EnhancedLog -Message "Starting registry-based validation for $SoftwareName." -Level "INFO"
+        $uniqueId = [Guid]::NewGuid().ToString()
+        $envVarName = "SoftwareInstallationStatus_$uniqueId"
 
-                $registryPaths = @(
-                    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-                    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-                    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
-                )
-
-                if ($RegistryPath) {
-                    Write-EnhancedLog -Message "Checking specific registry path: $RegistryPath." -Level "INFO"
-                    if (Test-Path $RegistryPath) {
-                        $app = Get-ItemProperty -Path $RegistryPath -ErrorAction SilentlyContinue
-                        if ($app -and $app.DisplayName -like "*$SoftwareName*") {
-                            $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
-                            $foundVersion = $installedVersion
-                            if ($installedVersion -ge $MinVersion) {
-                                Write-EnhancedLog -Message "Registry validation succeeded: $SoftwareName version $installedVersion found." -Level "INFO"
-                                return @{
-                                    IsInstalled = $true
-                                    Version     = $installedVersion
-                                    ProductCode = $app.PSChildName
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    Write-EnhancedLog -Message "Checking common uninstall registry paths for $SoftwareName." -Level "INFO"
-                    foreach ($path in $registryPaths) {
-                        $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
-                        foreach ($item in $items) {
-                            $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
-                            if ($app.DisplayName -like "*$SoftwareName*") {
-                                $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
-                                $foundVersion = $installedVersion
-                                if ($installedVersion -ge $MinVersion) {
-                                    Write-EnhancedLog -Message "Registry validation succeeded: $SoftwareName version $installedVersion found." -Level "INFO"
-                                    return @{
-                                        IsInstalled = $true
-                                        Version     = $installedVersion
-                                        ProductCode = $app.PSChildName
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            # File-based validation
-            if ($ExePath) {
-                Write-EnhancedLog -Message "Starting file-based validation for $SoftwareName at $ExePath." -Level "INFO"
-                if (Test-Path $ExePath) {
-                    $appVersionString = (Get-ItemProperty -Path $ExePath).VersionInfo.ProductVersion.Split(" ")[0]
-                    $appVersion = Sanitize-VersionString -versionString $appVersionString
-                    $foundVersion = $appVersion
-
-                    if ($appVersion -ge $MinVersion) {
-                        Write-EnhancedLog -Message "File-based validation succeeded: $SoftwareName version $appVersion found." -Level "INFO"
-                        return @{
-                            IsInstalled = $true
-                            Version     = $appVersion
-                            Path        = $ExePath
-                        }
-                    } else {
-                        Write-EnhancedLog -Message "File-based validation failed: $SoftwareName version $appVersion does not meet the minimum requirement ($MinVersion)." -Level "ERROR"
-                    }
-                } else {
-                    Write-EnhancedLog -Message "File-based validation failed: $SoftwareName executable not found at $ExePath." -Level "ERROR"
-                }
-            }
-
-            # Retry logic
-            if ($foundVersion) {
-                Write-EnhancedLog -Message "$SoftwareName version $foundVersion was found, but does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
-            } else {
-                Write-EnhancedLog -Message "Validation attempt $retryCount failed: $SoftwareName not found or does not meet the version requirement. Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
-            }
-
-            $retryCount++
-            Start-Sleep -Seconds $DelayBetweenRetries
+        $result = [PSCustomObject]@{
+            IsInstalled         = $false
+            MeetsMinRequirement = $false
+            IsUpToDate          = $false
+            Version             = $null
+            ErrorMessage        = $null
+            Status              = "Not Found"
+            Message             = "Software $SoftwareName not found."
+            ExitCode            = 1
+            Timestamp           = (Get-Date).ToString("o")
+            AttemptCount        = 0
+            ValidationSource    = "None"
         }
 
-        Write-EnhancedLog -Message "Validation failed after $MaxRetries retries: $SoftwareName not found or version did not meet the minimum requirement." -Level "ERROR"
-        return @{ IsInstalled = $false; Version = $foundVersion }
+        while ($retryCount -lt $MaxRetries -and -not $isInstalled) {
+            $retryCount++
+            $result.AttemptCount = $retryCount
+            $result = Test-SoftwareInstallation -SoftwareName $SoftwareName -RegistryPath $RegistryPath -ExePath $ExePath
+
+            if ($result.IsInstalled) {
+                Write-EnhancedLog -Message "$SoftwareName is installed. Detected version: $($result.Version)." -Level "INFO"
+                break
+            } else {
+                Write-EnhancedLog -Message "Validation attempt $retryCount failed: $SoftwareName not found. Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
+                Start-Sleep -Seconds $DelayBetweenRetries
+            }
+        }
+
+        if (-not $result.IsInstalled) {
+            Write-EnhancedLog -Message "$SoftwareName is not installed after $MaxRetries retries." -Level "ERROR"
+            $result.ErrorMessage = "$SoftwareName is not installed."
+            $result.Status = "Failed"
+            $result.Message = "$SoftwareName is not installed after $MaxRetries retries."
+            $result.ExitCode = 1
+
+            $jsonResult = $result | ConvertTo-Json -Compress
+            [System.Environment]::SetEnvironmentVariable($envVarName, $jsonResult, "Process")
+            
+            return $result
+        }
+
+        $versionComparison = Compare-SoftwareVersion -InstalledVersion $result.Version -MinVersion $MinVersion -LatestVersion $LatestVersion
+
+        $result.MeetsMinRequirement = $versionComparison.MeetsMinRequirement
+        $result.IsUpToDate = $versionComparison.IsUpToDate
+        $result.ExitCode = if ($versionComparison.MeetsMinRequirement -and $versionComparison.IsUpToDate) { 0 } elseif (-not $versionComparison.MeetsMinRequirement) { 3 } else { 4 }
+
+        $jsonResult = $result | ConvertTo-Json -Compress
+        [System.Environment]::SetEnvironmentVariable($envVarName, $jsonResult, "Process")
+        
+        return $result
     }
 
     End {
-
-        # To increase robustness we will be also calling PSADT https://psappdeploytoolkit.com/docs/reference/functions/Get-InstalledApplication below here to get the app info
-        # Get-InstalledApplication -name $SoftwareName -Verbose:$false
-        # $applicationInfo = Get-InstalledApplication -Name "Git" -Verbose:$false
-        # $applicationInfo | Format-List
-
-        # $null = Get-InstalledApplication -Name $SoftwareName
-        $applicationInfo = Get-InstalledApplication -Name $SoftwareName -exact
-        $applicationInfo | Format-List
-
-
         Write-EnhancedLog -Message "Exiting Validate-SoftwareInstallation function for $SoftwareName." -Level "NOTICE"
+        exit $result.ExitCode
     }
 }
