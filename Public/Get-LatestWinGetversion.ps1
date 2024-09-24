@@ -27,7 +27,7 @@ function Add-WinGetPathToEnvironment {
 
     begin {
         Write-EnhancedLog -Message "Starting Add-EnvPath function" -Level "INFO"
-        Log-Params -Params @{"Path" = $Path; "Container" = $Container}
+        Log-Params -Params @{"Path" = $Path; "Container" = $Container }
 
         $envPathHashtable = [ordered]@{}
         $containerMapping = @{
@@ -62,7 +62,8 @@ function Add-WinGetPathToEnvironment {
             if (-not $wingetCmd) {
                 throw "WinGet executable not found after adding to PATH."
             }
-        } catch {
+        }
+        catch {
             Write-EnhancedLog -Message "An error occurred: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
             throw
@@ -152,21 +153,33 @@ function Find-WinGetPath {
 function Get-LatestVersionFromWinGet {
     <#
     .SYNOPSIS
-    Retrieves the latest version of an application from WinGet.
+    Retrieves the latest version of an application from WinGet with a retry mechanism.
 
     .DESCRIPTION
-    This function queries WinGet to retrieve the latest version of a specified application.
+    This function queries WinGet to retrieve the latest version of a specified application. It includes a retry mechanism if the latest version is not retrieved.
 
     .PARAMETER id
     The exact WinGet package ID of the application.
 
+    .PARAMETER MaxRetries
+    The maximum number of retry attempts if the version retrieval fails.
+
+    .PARAMETER DelayBetweenRetries
+    The delay between retry attempts in seconds.
+
     .EXAMPLE
-    $latestVersion = Get-LatestVersionFromWinGet -id "VideoLAN.VLC"
+    $latestVersion = Get-LatestVersionFromWinGet -id "VideoLAN.VLC" -MaxRetries 3 -DelayBetweenRetries 5
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$id
+        [string]$id,
+
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
+
+        [Parameter(Mandatory = $false)]
+        [int]$DelayBetweenRetries = 5
     )
 
     Begin {
@@ -174,36 +187,64 @@ function Get-LatestVersionFromWinGet {
     }
 
     Process {
-        try {
-            $wingetPath = Find-WinGetPath
-            $params = @{
-                FilePath               = $wingetPath
-                ArgumentList           = "show --id $id --exact --accept-source-agreements"
-                WindowStyle            = "Hidden"
-                Wait                   = $true
-                RedirectStandardOutput = "$env:TEMP\wingetOutput.txt"
+        $retryCount = 0
+        $latestVersion = $null
+
+        while ($retryCount -lt $MaxRetries -and -not $latestVersion) {
+            try {
+                $retryCount++
+                Write-EnhancedLog -Message "Attempt $retryCount of $MaxRetries to retrieve the latest version for $id." -Level "INFO"
+
+                $wingetPath = Find-WinGetPath
+                $params = @{
+                    FilePath               = $wingetPath
+                    ArgumentList           = "show --id $id --exact --accept-source-agreements"
+                    WindowStyle            = "Hidden"
+                    Wait                   = $true
+                    RedirectStandardOutput = "$env:TEMP\wingetOutput.txt"
+                }
+
+                Write-EnhancedLog -Message "Querying WinGet for the latest version of package ID: $id" -Level "INFO"
+                Start-Process @params
+                $winGetOutput = Get-Content -Path "$env:TEMP\wingetOutput.txt"
+                Remove-Item -Path "$env:TEMP\wingetOutput.txt" -Force
+
+                $latestVersion = $winGetOutput | Select-String -Pattern "version:" | ForEach-Object { $_.Line -replace '.*version:\s*(.*)', '$1' }
+
+                if (-not $latestVersion) {
+                    Write-EnhancedLog -Message "Failed to retrieve latest version. Waiting $DelayBetweenRetries seconds before retrying..." -Level "WARNING"
+                    Start-Sleep -Seconds $DelayBetweenRetries
+                }
+                else {
+                    Write-EnhancedLog -Message "WinGet latest version retrieved: $latestVersion" -Level "INFO"
+                }
             }
-
-            Write-EnhancedLog -Message "Querying WinGet for the latest version of package ID: $id" -Level "INFO"
-            Start-Process @params
-            $winGetOutput = Get-Content -Path "$env:TEMP\wingetOutput.txt"
-            Remove-Item -Path "$env:TEMP\wingetOutput.txt" -Force
-
-            $latestVersion = $winGetOutput | Select-String -Pattern "version:" | ForEach-Object { $_.Line -replace '.*version:\s*(.*)', '$1' }
-            Write-EnhancedLog -Message "WinGet latest version: $latestVersion" -Level "INFO"
-            return $latestVersion
+            catch {
+                Write-EnhancedLog -Message "Error occurred during version retrieval attempt $retryCount $($_.Exception.Message)" -Level "ERROR"
+                if ($retryCount -lt $MaxRetries) {
+                    Write-EnhancedLog -Message "Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
+                    Start-Sleep -Seconds $DelayBetweenRetries
+                }
+                else {
+                    Handle-Error -ErrorRecord $_
+                    throw
+                }
+            }
         }
-        catch {
-            Write-EnhancedLog -Message "Failed to get latest version from WinGet: $($_.Exception.Message)" -Level "ERROR"
-            Handle-Error -ErrorRecord $_
-            throw
+
+        if (-not $latestVersion) {
+            Write-EnhancedLog -Message "Failed to retrieve the latest version after $MaxRetries attempts." -Level "ERROR"
+            throw "Unable to retrieve the latest version from WinGet after $MaxRetries attempts."
         }
+
+        return $latestVersion
     }
 
     End {
         Write-EnhancedLog -Message "Exiting Get-LatestVersionFromWinGet function" -Level "Notice"
     }
 }
+
 function Get-LatestWinGetVersion {
     <#
     .SYNOPSIS
@@ -252,9 +293,9 @@ function Get-LatestWinGetVersion {
             $latestVersion = if ($TargetVersion) { [version]$TargetVersion } else { [version](Get-LatestVersionFromWinGet -id $id) }
 
             $result = [PSCustomObject]@{
-                LatestVersion       = $latestVersion
-                Status              = "Latest Version Retrieved"
-                Message             = "The latest version of $id is $latestVersion."
+                LatestVersion = $latestVersion
+                Status        = "Latest Version Retrieved"
+                Message       = "The latest version of $id is $latestVersion."
             }
 
             Write-EnhancedLog -Message $result.Message -Level "INFO"
