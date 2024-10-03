@@ -4,7 +4,7 @@ function Authenticate-GitHubCLI {
     Authenticates with GitHub CLI using a token provided by the user or from a secrets file.
 
     .DESCRIPTION
-    This function allows the user to authenticate with GitHub CLI by either entering a GitHub token manually or using a token from a secrets file located in the `$ScriptDirectory`.
+    This function allows the user to authenticate with GitHub CLI by either entering a GitHub token manually or using a token from a secrets file located in the `$PSScriptRoot`.
 
     .PARAMETER GhPath
     The path to the GitHub CLI executable (gh.exe).
@@ -40,23 +40,20 @@ function Authenticate-GitHubCLI {
                 # If the secrets file does not exist, prompt the user to enter the token
                 Write-Warning "Secrets file not found. Please enter your GitHub token."
                 $secureToken = Read-Host "Enter your GitHub token" -AsSecureString
-                $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
-                $token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
-                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
-
-                # Store the token in the secrets.psd1 file
+                
+                # Store the token securely in the secrets.psd1 file
                 $secretsContent = @{
-                    GitHubToken = $token
+                    GitHubToken = $secureToken | ConvertFrom-SecureString
                 }
                 $secretsContent | Export-Clixml -Path $secretsFilePath
-                Write-Host "GitHub token has been saved to $secretsFilePath." -ForegroundColor Green
+                Write-Host "GitHub token has been saved securely to $secretsFilePath." -ForegroundColor Green
             }
             else {
                 # If the secrets file exists, import it
-                $secrets = Import-PowerShellDataFile -Path $secretsFilePath
-                $token = $secrets.GitHubToken
+                $secrets = Import-Clixml -Path $secretsFilePath
+                $secureToken = $secrets.GitHubToken | ConvertTo-SecureString
 
-                if (-not $token) {
+                if (-not $secureToken) {
                     $errorMessage = "GitHub token not found in the secrets file."
                     Write-EnhancedLog -Message $errorMessage -Level "ERROR"
                     throw $errorMessage
@@ -64,6 +61,11 @@ function Authenticate-GitHubCLI {
 
                 Write-EnhancedLog -Message "Using GitHub token from secrets file for authentication." -Level "INFO"
             }
+
+            # Convert secure string back to plain text for GitHub CLI authentication
+            $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
+            $token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
 
             # Check if GitHub CLI is already authenticated
             $authArguments = @("auth", "status", "-h", "github.com")
