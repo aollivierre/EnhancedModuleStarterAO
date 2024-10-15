@@ -1,16 +1,12 @@
 function Write-EnhancedLog {
     param (
         [string]$Message,
-        [string]$Level = 'INFO',
-        [switch]$Async = $false # Remove default value, it will be controlled by the environment variable
+        [string]$Level = 'INFO'
     )
 
-    # Check if the Async switch is not set, then use the global variable
-    if (-not $Async) {
-        $Async = $global:LOG_ASYNC
-        # Write-Host "Global LOG_ASYNC variable is set to $Async"
-    }
-
+    # Check the global async logging setting and silent mode
+    $Async = $global:LOG_ASYNC
+    $Silent = $global:LOG_SILENT
 
     # Get the PowerShell call stack to determine the actual calling function
     $callStack = Get-PSCallStack
@@ -22,36 +18,35 @@ function Write-EnhancedLog {
     # Prepare the formatted message with the actual calling function information
     $formattedMessage = "[$Level] $Message"
 
-    # Map custom levels to PSFramework levels
+    # In Silent mode, treat all levels as Debug
+    if ($Silent) {
+        $Level = 'DEBUG'
+    }
+
+    # Map custom levels to PSFramework levels based on async mode and log type
     $psfLevel = switch ($Level.ToUpper()) {
-        'DEBUG' { 'Debug' }
-        'INFO' { 'Host' }
-        'NOTICE' { 'Important' }
-        'WARNING' { 'Warning' }
-        'ERROR' { 'Error' }
-        'CRITICAL' { 'Critical' }
-        'IMPORTANT' { 'Important' }
-        'OUTPUT' { 'Output' }
-        'SIGNIFICANT' { 'Significant' }
-        'VERYVERBOSE' { 'VeryVerbose' }
-        'VERBOSE' { 'Verbose' }
-        'SOMEWHATVERBOSE' { 'SomewhatVerbose' }
-        'SYSTEM' { 'System' }
-        'INTERNALCOMMENT' { 'InternalComment' }
+        # These levels always log to the console, synchronously
+        'CRITICAL' { 'Critical' }  # Always log to console, sync (unless in silent mode)
+        'ERROR'    { 'Error' }     # Always log to console, sync (unless in silent mode)
+        'WARNING'  { 'Warning' }   # Always log to console, sync (unless in silent mode)
+
+        # Other levels behave differently based on async mode
+        'INFO'            { if ($Async) { 'Debug' } else { 'Host' } }
+        'DEBUG'           { if ($Async) { 'Debug' } else { 'Host' } }
+        'NOTICE'          { if ($Async) { 'Debug' } else { 'Important' } }
+        'IMPORTANT'       { if ($Async) { 'Debug' } else { 'Important' } }
+        'OUTPUT'          { if ($Async) { 'Debug' } else { 'Output' } }
+        'SIGNIFICANT'     { if ($Async) { 'Debug' } else { 'Significant' } }
+        'VERYVERBOSE'     { if ($Async) { 'Debug' } else { 'VeryVerbose' } }
+        'VERBOSE'         { if ($Async) { 'Debug' } else { 'Verbose' } }
+        'SOMEWHATVERBOSE' { if ($Async) { 'Debug' } else { 'SomewhatVerbose' } }
+        'SYSTEM'          { if ($Async) { 'Debug' } else { 'System' } }
+        'INTERNALCOMMENT' { if ($Async) { 'Debug' } else { 'InternalComment' } }
+
+        # Default to 'Host' if no match is found (sync to console)
         default { 'Host' }
     }
 
-    if ($Async) {
-        # Enqueue the log message for async processing
-        $logItem = [PSCustomObject]@{
-            Level        = $psfLevel
-            Message      = $formattedMessage
-            FunctionName = "$parentScriptName.$callerFunction"
-        }
-        $global:LogQueue.Enqueue($logItem)
-    }
-    else {
-        # Log the message synchronously
-        Write-PSFMessage -Level $psfLevel -Message $formattedMessage -FunctionName "$parentScriptName.$callerFunction"
-    }
+    # Log the message using the mapped PSFramework log level
+    Write-PSFMessage -Level $psfLevel -Message $formattedMessage -FunctionName "$parentScriptName.$callerFunction"
 }

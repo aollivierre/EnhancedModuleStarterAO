@@ -35,6 +35,7 @@ Process {
         # Dot-source the function files
         foreach ($FunctionFile in @($PublicFunctions + $PrivateFunctions)) {
             try {
+                # Write-EnhancedLog -Message "Dot-sourcing: $($FunctionFile.FullName)" -Level INFO
                 Write-Host "Dot-sourcing: $($FunctionFile.FullName)"
                 . $FunctionFile.FullName
             }
